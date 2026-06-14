@@ -1,9 +1,16 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, dialog, screen } from 'electron'
 import { join } from 'path'
+import { writeFileSync } from 'fs'
+
+process.on('uncaughtException', (err) => {
+  writeFileSync('crash.log', err.stack || err.message + '\n')
+})
+process.on('unhandledRejection', (reason) => {
+  writeFileSync('crash.log', String(reason) + '\n')
+})
 
 // Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
-
 // Hardware acceleration is REQUIRED on Windows for transparent windows
 // app.disableHardwareAcceleration()
 
@@ -43,6 +50,9 @@ let chatOpen       = false
 let lastWalkDir: 'left' | 'right' | 'idle' = 'idle'
 
 function getWorkArea() {
+  if (spriteWindow && !spriteWindow.isDestroyed()) {
+    return screen.getDisplayMatching(spriteWindow.getBounds()).workArea
+  }
   return screen.getPrimaryDisplay().workArea
 }
 
@@ -167,7 +177,7 @@ function createDashboardWindow(): BrowserWindow {
     frame:           false,
     titleBarStyle:   'hidden',
     backgroundColor: '#FCFCF0',
-    show:            false,
+    show:            true,
     webPreferences: {
       preload:          join(__dirname, '../preload/preload.js'),
       contextIsolation: true,

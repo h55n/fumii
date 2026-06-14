@@ -19,7 +19,7 @@ export function createTray(
 ): Tray {
   let icon: Electron.NativeImage
   try {
-    icon = nativeImage.createFromPath(assetPath('sprites', 'fumii_tray_16.png'))
+    icon = nativeImage.createFromPath(assetPath('sprites', 'lenny-idle.png')).resize({ width: 16, height: 16 })
     if (icon.isEmpty()) icon = nativeImage.createEmpty()
   } catch {
     icon = nativeImage.createEmpty()

@@ -27,6 +27,11 @@ if errorlevel 1 (
 )
 
 echo.
+echo [1.5/2] Cleaning up old processes...
+taskkill /F /IM electron.exe /T >nul 2>&1
+taskkill /F /IM fumii.exe /T >nul 2>&1
+
+echo.
 echo [2/2] Starting fumii...
 echo.
 npm run dev

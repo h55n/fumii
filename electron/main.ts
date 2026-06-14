@@ -11,8 +11,8 @@ process.on('unhandledRejection', (reason) => {
 
 // Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
-// Hardware acceleration is REQUIRED on Windows for transparent windows
-// app.disableHardwareAcceleration()
+// Hardware acceleration is REQUIRED to be disabled on some Windows GPUs for transparent windows to render
+app.disableHardwareAcceleration()
 
 // Single-instance lock — no duplicate fumii processes
 if (!app.requestSingleInstanceLock()) {
@@ -135,6 +135,7 @@ function createSpriteWindow(): BrowserWindow {
     x,
     y,
     transparent:     true,
+    backgroundColor: '#00000000',
     frame:           false,
     alwaysOnTop:     true,
     skipTaskbar:     true,
@@ -165,6 +166,10 @@ function createSpriteWindow(): BrowserWindow {
     win.webContents.closeDevTools()
   })
 
+  win.once('ready-to-show', () => {
+    win.show()
+  })
+
   return win
 }
 
@@ -177,6 +182,7 @@ function createDashboardWindow(): BrowserWindow {
     frame:           false,
     titleBarStyle:   'hidden',
     backgroundColor: '#FCFCF0',
+    icon:            app.isPackaged ? join(process.resourcesPath, 'assets/sprites/fumii_icon.png') : join(__dirname, '../../src/assets/sprites/fumii_icon.png'),
     show:            true,
     webPreferences: {
       preload:          join(__dirname, '../preload/preload.js'),

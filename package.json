@@ -1,7 +1,11 @@
 {
   "name": "fumii",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "you're never really alone — a desktop AI companion",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fumii/fumii.git"
+  },
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {

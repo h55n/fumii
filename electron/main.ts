@@ -4,8 +4,8 @@ import { join } from 'path'
 // Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
-// ── GPU / transparency prerequisites ──────────────────────────────────────
-app.disableHardwareAcceleration()
+// Hardware acceleration is REQUIRED on Windows for transparent windows
+// app.disableHardwareAcceleration()
 
 // Single-instance lock — no duplicate fumii processes
 if (!app.requestSingleInstanceLock()) {

@@ -1,0 +1,27 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.env
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Build artifacts
+out/
+build/
+
+# DB (local data, never committed)
+*.db
+*.db-shm
+*.db-wal

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:;" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fumii</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design tokens ────────────────────────────────────────────────── */
+    :root {
+      --color-bg:             #FCFCF0;
+      --color-surface:        #F5F5E8;
+      --color-surface-raised: #EDEEDD;
+      --color-primary:        #2D6BB1;
+      --color-primary-soft:   rgba(45, 107, 177, 0.10);
+      --color-accent:         #BAC98D;
+      --color-sage:           #BAC98D;
+      --color-yellow:         #EEE29E;
+      --color-text-primary:   #1A2433;
+      --color-text-secondary: #6B7B8D;
+      --color-text-fumii:     #2D6BB1;
+      --color-border:         rgba(45, 107, 177, 0.12);
+      --color-danger:         #E53E3E;
+      --glow-primary: 0 0 20px rgba(45, 107, 177, 0.22), 0 0 60px rgba(45, 107, 177, 0.08);
+      --font-display: 'DM Sans', system-ui, sans-serif;
+      --font-mono:    'Departure Mono', 'Courier New', monospace;
+      --radius-sm:   8px;
+      --radius-md:   12px;
+      --radius-lg:   20px;
+      --radius-full: 9999px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      --shadow-card-hover: 0 4px 16px rgba(45, 107, 177, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      font-family: var(--font-display);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    #root { height: 100%; }
+
+    ::-webkit-scrollbar          { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track    { background: transparent; }
+    ::-webkit-scrollbar-thumb    { background: var(--color-surface-raised); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #D5D5C0; }
+
+    .no-select { user-select: none; -webkit-user-select: none; }
+    .drag-region { -webkit-app-region: drag; }
+    .no-drag     { -webkit-app-region: no-drag; }
+
+    /* ── Animations ──────────────────────────────────────────────────── */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    .page-enter {
+      animation: slideUp 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      box-shadow: var(--shadow-card);
+      transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--color-border);
+      transform: translateY(-1px);
+    }
+
+    .stagger-1 { animation-delay: 0ms; }
+    .stagger-2 { animation-delay: 60ms; }
+    .stagger-3 { animation-delay: 120ms; }
+    .stagger-4 { animation-delay: 180ms; }
+    .stagger-5 { animation-delay: 240ms; }
+
+    /* Focus ring for inputs */
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--color-primary) !important;
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
+      outline: none;
+    }
+
+    /* Button base reset */
+    button {
+      font-family: var(--font-display);
+      cursor: pointer;
+      border: none;
+      background: none;
+      outline: none;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/dashboard/main.tsx"></script>
+</body>
+</html>

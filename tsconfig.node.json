@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite":      true,
+    "target":         "ESNext",
+    "module":         "CommonJS",
+    "moduleResolution": "bundler",
+    "strict":         true,
+    "noEmit":         false,
+    "outDir":         "dist/electron",
+    "rootDir":        ".",
+    "skipLibCheck":   true,
+    "types":          ["node"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "electron/**/*",
+    "src/memory/**/*",
+    "src/llm/**/*"
+  ]
+}

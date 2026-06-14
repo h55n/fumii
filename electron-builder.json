@@ -1,0 +1,38 @@
+{
+  "appId": "com.fumii.app",
+  "productName": "fumii",
+  "copyright": "fumii contributors",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "!dist/**/*.map"
+  ],
+  "extraResources": [
+    {
+      "from": "src/assets",
+      "to":   "assets"
+    }
+  ],
+  "win": {
+    "target":          [{ "target": "nsis", "arch": ["x64"] }],
+    "requestedExecutionLevel": "asInvoker",
+    "artifactName":   "${productName}-setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick":                true,
+    "perMachine":              false,
+    "allowToChangeInstallationDirectory": false,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut":   true,
+    "createStartMenuShortcut": true
+  },
+  "asar":       true,
+  "asarUnpack": [
+    "**/node_modules/better-sqlite3/**",
+    "**/node_modules/keytar/**"
+  ]
+}

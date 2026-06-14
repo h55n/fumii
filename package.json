@@ -1,0 +1,40 @@
+{
+  "name": "fumii",
+  "version": "1.0.0",
+  "description": "you're never really alone — a desktop AI companion",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev":          "electron-vite dev",
+    "build":        "electron-vite build",
+    "dist":         "npm run build && electron-builder",
+    "preview":      "electron-vite preview",
+    "typecheck":    "tsc --noEmit",
+    "postinstall":  "node scripts/generate-placeholder-assets.js && npx @electron/rebuild -f -w better-sqlite3 -w keytar",
+    "check":        "node scripts/check-env.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "dompurify":      "^3.1.6",
+    "keytar":         "^7.9.0",
+    "marked":         "^12.0.0",
+    "react":          "^18.3.1",
+    "react-dom":      "^18.3.1",
+    "zustand":        "^4.5.4"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/utils":    "^3.0.0",
+    "@types/better-sqlite3":      "^7.6.10",
+    "@types/dompurify":           "^3.0.5",
+    "@types/node":                "^20.14.0",
+    "@types/react":               "^18.3.3",
+    "@types/react-dom":           "^18.3.0",
+    "@vitejs/plugin-react":       "^4.3.0",
+    "electron":                   "^29.4.0",
+    "electron-builder":           "^24.13.3",
+    "electron-vite":              "^2.3.0",
+    "typescript":                 "^5.4.5",
+    "vite":                       "^5.4.0"
+  }
+}

@@ -1,40 +1,22 @@
 import React from 'react'
 import { ChatMessage } from '../store/chatStore'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 interface ChatBubbleProps {
   message: ChatMessage
 }
 
-// ── Light markdown renderer ─────────────────────────────────────────────────
+// ── Markdown renderer ───────────────────────────────────────────────────
 // Uses marked (MIT) + DOMPurify for safe HTML output in fumii's assistant bubbles.
-// Falls back to plain text if the libraries are not available.
 
-let _marked: ((src: string) => string) | null = null
-let _purify: ((dirty: string) => string) | null = null
-
-function initMarkdown() {
-  if (_marked !== null) return
-  try {
-    // Dynamic import — available after npm install
-    const { marked } = require('marked')
-    marked.setOptions({ breaks: true, gfm: true })
-    _marked = (src: string) => marked.parse(src) as string
-  } catch {
-    _marked = (src: string) => src // plain text fallback
-  }
-  try {
-    const DOMPurify = require('dompurify')
-    _purify = (dirty: string) => DOMPurify.sanitize(dirty)
-  } catch {
-    _purify = (s: string) => s // no DOMPurify installed yet — safe in Electron's sandboxed webContents
-  }
-}
+// Configure marked once
+marked.setOptions({ breaks: true, gfm: true })
 
 function renderMarkdown(content: string): string {
-  initMarkdown()
   try {
-    const html = _marked!(content)
-    return _purify!(html)
+    const html = marked.parse(content) as string
+    return DOMPurify.sanitize(html)
   } catch {
     return content
   }

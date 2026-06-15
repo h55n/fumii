@@ -6,6 +6,8 @@ import { buildPrompt, Message } from '../../src/llm/PromptBuilder'
 import { getSetting } from '../../src/memory/MemoryStore'
 
 const KEYTAR_SERVICE = 'fumii-app'
+const LLM_TIMEOUT_MS = 60_000 // 60s timeout for LLM API calls
+let activeStreamChannel: string | null = null // prevent duplicate concurrent streams
 
 // Persistent ClaudeCodeProvider instance — kept alive across chat turns.
 // Destroyed on llm:cancel or before-quit.
@@ -64,6 +66,12 @@ export function registerLLMHandlers(): void {
   ipcMain.handle(
     'llm:stream-message',
     async (event, rawMessages: Message[], _config, channel: string) => {
+      // Prevent duplicate concurrent streams
+      if (activeStreamChannel) {
+        throw new Error('A streaming request is already in progress')
+      }
+      activeStreamChannel = channel
+
       const { provider, model, apiKey } = await resolveProvider()
 
       const lastUserMsg = [...rawMessages]
@@ -74,6 +82,11 @@ export function registerLLMHandlers(): void {
       const messages = buildPrompt(lastUserMsg, history.slice(0, -1))
 
       const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win || win.isDestroyed()) {
+        activeStreamChannel = null
+        throw new Error('Browser window is no longer available')
+      }
+
       let full = ''
 
       try {
@@ -86,14 +99,22 @@ export function registerLLMHandlers(): void {
           llmStream = llm.stream(messages)
         }
 
+        // Timeout guard
+        const timeoutId = setTimeout(() => {
+          if (!win.isDestroyed()) win.webContents.send(channel, null)
+        }, LLM_TIMEOUT_MS)
+
         for await (const chunk of llmStream) {
           full += chunk
-          win?.webContents.send(channel, chunk)
+          if (!win.isDestroyed()) win.webContents.send(channel, chunk)
         }
-        win?.webContents.send(channel, null) // end-of-stream
+        clearTimeout(timeoutId)
+        if (!win.isDestroyed()) win.webContents.send(channel, null) // end-of-stream
       } catch (err) {
-        win?.webContents.send(channel, null)
+        if (!win.isDestroyed()) win.webContents.send(channel, null)
         throw err
+      } finally {
+        activeStreamChannel = null
       }
 
       return full

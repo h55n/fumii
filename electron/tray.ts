@@ -71,14 +71,14 @@ export function createTray(
       click: () => {
         dialog.showMessageBox({
           title:   'fumii',
-          message: "fumii v1.0.0\nyou're never really alone",
+          message: `fumii v${app.getVersion()}\nyou're never really alone`,
           detail:  'A persistent AI companion that lives on your desktop.\n\nElectron + React + TypeScript'
         })
       }
     },
     {
       label: 'Quit',
-      click: () => app.exit(0)
+      click: () => app.quit()
     }
   ])
 

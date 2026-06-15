@@ -12,6 +12,8 @@ declare global {
       sprite: {
         setMouseEvents: (enabled: boolean) => void
         toggleChat:     (open: boolean)    => void
+        sleep:          ()                 => void
+        wake:           ()                 => void
       }
       dashboard: {
         open: () => void
@@ -50,9 +52,13 @@ declare global {
         getAll:    ()                           => Promise<Record<string, string>>
         getApiKey: (provider: string)           => Promise<string>
         setApiKey: (provider: string, key: string) => Promise<boolean>
+        detectClaudeCode: () => Promise<{ found: boolean; path: string | null }>
       }
       on:  (channel: string, callback: (...args: unknown[]) => void) => void
-      off: (channel: string) => void
+      off: (channel: string, callback?: (...args: unknown[]) => void) => void
+
+      // Safe external URL opening
+      openExternal: (url: string) => Promise<boolean>
     }
 
     // Internal helpers wired by preload for EpisodicLogger (renderer-safe)
@@ -60,3 +66,4 @@ declare global {
     __fumiiSaveEpisode: (summary: string, tags: string, mood: string, turns: number) => void
   }
 }
+

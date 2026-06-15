@@ -12,6 +12,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+crash.log
+debug.log
 
 # Editor
 .vscode/settings.json
@@ -20,6 +22,7 @@ npm-debug.log*
 # Build artifacts
 out/
 build/
+*.tsbuildinfo
 
 # DB (local data, never committed)
 *.db

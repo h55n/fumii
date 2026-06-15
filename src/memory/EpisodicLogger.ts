@@ -66,13 +66,15 @@ export async function summarizeConversation(
   let raw = ''
   try {
     raw = await llmCall([...turns, prompt])
-  } catch {
+  } catch (err) {
+    console.warn('[fumii:episodic] summarization failed:', err instanceof Error ? err.message : err)
     return // non-fatal — conversation still happened, just not summarised
   }
 
   let parsed: { summary?: string; tags?: unknown; mood?: string } = {}
   try {
-    const cleaned = raw.replace(/```json|```/g, '').trim()
+    // Strip markdown code fences (case-insensitive, handles various formats)
+    const cleaned = raw.replace(/```(?:json|JSON)?\s*/gi, '').trim()
     parsed = JSON.parse(cleaned)
   } catch {
     // Fallback: extract keywords manually

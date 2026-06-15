@@ -16,6 +16,9 @@ interface NdjsonEvent {
   error?: { message: string }
 }
 
+const MAX_BUFFER_SIZE = 1024 * 1024 // 1MB buffer limit
+const COMPLETE_TIMEOUT_MS = 120_000 // 2 minute timeout
+
 export class ClaudeCodeProvider implements LLMProvider {
   private process: ChildProcess | null = null
   private buffer = ''
@@ -31,6 +34,11 @@ export class ClaudeCodeProvider implements LLMProvider {
   private ensureProcess(): ChildProcess {
     if (this.process && !this.process.killed) return this.process
 
+    // Validate path — prevent shell injection
+    if (/[;&|`$(){}\[\]!#]/.test(this.claudePath)) {
+      throw new Error('Invalid Claude Code path — contains shell metacharacters')
+    }
+
     this.process = spawn(this.claudePath, [
       '--output-format', 'stream-json',
       '--verbose',
@@ -38,7 +46,7 @@ export class ClaudeCodeProvider implements LLMProvider {
     ], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
-      shell: true,
+      // shell: false (default) — avoids shell injection risk
     })
 
     this.buffer = ''
@@ -46,6 +54,10 @@ export class ClaudeCodeProvider implements LLMProvider {
     this.process.stdout?.setEncoding('utf8')
     this.process.stdout?.on('data', (chunk: string) => {
       this.buffer += chunk
+      // Prevent unbounded buffer growth
+      if (this.buffer.length > MAX_BUFFER_SIZE) {
+        this.buffer = this.buffer.slice(-MAX_BUFFER_SIZE / 2)
+      }
       this.flushBuffer()
     })
 
@@ -124,6 +136,28 @@ export class ClaudeCodeProvider implements LLMProvider {
       this.resolveQueue.push(resolve)
       this.rejectQueue.push(reject)
       proc.stdin?.write(userMessage + '\n')
+
+      // Timeout — don't hang forever if CLI is unresponsive
+      const timer = setTimeout(() => {
+        const idx = this.resolveQueue.indexOf(resolve)
+        if (idx !== -1) {
+          this.resolveQueue.splice(idx, 1)
+          this.rejectQueue.splice(idx, 1)
+          reject(new Error('Claude Code CLI timed out after 120 seconds'))
+        }
+      }, COMPLETE_TIMEOUT_MS)
+
+      // Clear timeout when resolved/rejected
+      const origResolve = resolve
+      this.resolveQueue[this.resolveQueue.length - 1] = (value: string) => {
+        clearTimeout(timer)
+        origResolve(value)
+      }
+      const origReject = reject
+      this.rejectQueue[this.rejectQueue.length - 1] = (err: Error) => {
+        clearTimeout(timer)
+        origReject(err)
+      }
     })
   }
 

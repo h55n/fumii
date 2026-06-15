@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react'
 import { FumiiSprite, WalkDirection } from './FumiiSprite'
 import { ThinkingBubble } from './ThinkingBubble'
 import { ChatOverlay } from '../chat/ChatOverlay'
+import { ErrorBoundary } from '../chat/ErrorBoundary'
 import { useAppStore } from '../store/appStore'
 import { useChatStore } from '../store/chatStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -9,7 +10,7 @@ import { checkSleepState } from './EmotionState'
 
 export function SpriteWindow() {
   const { spriteState, setSpriteState, lastInteractionTime, updateInteractionTime } = useAppStore()
-  const { isOpen, setOpen } = useChatStore()
+  const { isOpen, setOpen, clearMessages } = useChatStore()
   const { load: loadSettings, get } = useSettingsStore()
   const [walkDirection, setWalkDirection] = useState<WalkDirection>('idle')
 
@@ -32,12 +33,14 @@ export function SpriteWindow() {
       setWalkDirection(dir as WalkDirection)
     }
     window.fumiiAPI?.on('sprite:walk-direction', handler)
+    return () => { window.fumiiAPI?.off('sprite:walk-direction', handler) }
   }, [])
 
   // Global hotkey from main process (Ctrl+Shift+F)
   useEffect(() => {
     const handler = () => handleToggleChat(!isOpenRef.current)
     window.fumiiAPI?.on('hotkey:toggle-chat', handler)
+    return () => { window.fumiiAPI?.off('hotkey:toggle-chat', handler) }
   }, []) // eslint-disable-line
 
   // Idle → sleepy after 2 hours
@@ -52,10 +55,12 @@ export function SpriteWindow() {
 
   // Memory cleared notification
   useEffect(() => {
-    window.fumiiAPI?.on('memory:cleared', () => {
+    const handler = () => {
       setSpriteState('waving')
       setTimeout(() => setSpriteState('idle'), 3000)
-    })
+    }
+    window.fumiiAPI?.on('memory:cleared', handler)
+    return () => { window.fumiiAPI?.off('memory:cleared', handler) }
   }, [])
 
   const handleToggleChat = useCallback((open: boolean) => {
@@ -63,7 +68,11 @@ export function SpriteWindow() {
     window.fumiiAPI?.sprite.toggleChat(open)
     updateInteractionTime()
     setSpriteState(open ? 'listening' : 'idle')
-  }, [])
+    // Clear messages when chat closes to reset session
+    if (!open) {
+      clearMessages()
+    }
+  }, [setOpen, updateInteractionTime, setSpriteState, clearMessages])
 
   const handleMouseEnter = () => {
     window.fumiiAPI?.sprite.setMouseEvents(true)
@@ -137,9 +146,12 @@ export function SpriteWindow() {
           width:    360,
           zIndex:   20
         }}>
-          <ChatOverlay onClose={() => handleToggleChat(false)} />
+          <ErrorBoundary fallbackMessage="chat hit an error — click to retry">
+            <ChatOverlay onClose={() => handleToggleChat(false)} />
+          </ErrorBoundary>
         </div>
       )}
     </div>
   )
 }
+

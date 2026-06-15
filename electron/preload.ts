@@ -76,6 +76,7 @@ contextBridge.exposeInMainWorld('fumiiAPI', {
   },
 
   // Listen for events pushed from main → renderer
+  // Track registered listeners so off() only removes what we added
   on: (channel: string, callback: (...args: unknown[]) => void) => {
     const allowed = [
       'emotion:update',
@@ -86,12 +87,28 @@ contextBridge.exposeInMainWorld('fumiiAPI', {
       'sprite:status'
     ]
     if (!allowed.includes(channel)) return
-    ipcRenderer.on(channel, (_e, ...args) => callback(...args))
+    const wrapper = (_e: unknown, ...args: unknown[]) => callback(...args)
+    ;(wrapper as any).__fumiiOriginal = callback
+    ipcRenderer.on(channel, wrapper)
   },
 
-  off: (channel: string) => {
-    ipcRenderer.removeAllListeners(channel)
-  }
+  off: (channel: string, callback?: (...args: unknown[]) => void) => {
+    if (callback) {
+      // Remove specific listener
+      const listeners = ipcRenderer.listeners(channel)
+      for (const fn of listeners) {
+        if ((fn as any).__fumiiOriginal === callback) {
+          ipcRenderer.removeListener(channel, fn as any)
+          break
+        }
+      }
+    } else {
+      ipcRenderer.removeAllListeners(channel)
+    }
+  },
+
+  // Safe external URL opening (replaces window.open)
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
 })
 
 // Hook the EpisodicLogger's fire-and-forget calls into IPC

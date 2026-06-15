@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Episode } from '../../memory/types'
 import { MemoryCard } from '../components/MemoryCard'
 
@@ -6,9 +6,11 @@ export function Memory() {
   const [episodes, setEpisodes] = useState<Episode[]>([])
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     loadEpisodes()
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   }, [])
 
   const loadEpisodes = async () => {
@@ -20,17 +22,21 @@ export function Memory() {
     setLoading(false)
   }
 
-  const handleSearch = async (q: string) => {
+  const handleSearch = useCallback((q: string) => {
     setQuery(q)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
     if (!q.trim()) {
       loadEpisodes()
       return
     }
-    try {
-      const data = await window.fumiiAPI.memory.searchEpisodes(q)
-      setEpisodes(data || [])
-    } catch {}
-  }
+    // Debounce search queries — 300ms delay prevents excessive IPC/SQLite calls
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const data = await window.fumiiAPI.memory.searchEpisodes(q)
+        setEpisodes(data || [])
+      } catch {}
+    }, 300)
+  }, [])
 
   return (
     <div style={{ maxWidth: 720 }}>

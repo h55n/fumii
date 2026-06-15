@@ -1,18 +1,26 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, dialog, screen } from 'electron'
 import { join } from 'path'
-import { writeFileSync } from 'fs'
+import { appendFileSync, mkdirSync } from 'fs'
+
+function getCrashLogPath(): string {
+  // app may not be ready yet when uncaughtException fires during startup
+  const dir = app?.isReady?.() ? app.getPath('userData') : (process.env.APPDATA ? join(process.env.APPDATA, 'fumii') : '.')
+  try { mkdirSync(dir, { recursive: true }) } catch {}
+  return join(dir, 'crash.log')
+}
 
 process.on('uncaughtException', (err) => {
-  writeFileSync('crash.log', err.stack || err.message + '\n')
+  try { appendFileSync(getCrashLogPath(), `[${new Date().toISOString()}] UNCAUGHT: ${err.stack || err.message}\n`) } catch {}
 })
 process.on('unhandledRejection', (reason) => {
-  writeFileSync('crash.log', String(reason) + '\n')
+  try { appendFileSync(getCrashLogPath(), `[${new Date().toISOString()}] REJECTION: ${String(reason)}\n`) } catch {}
 })
 
 // Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 // Hardware acceleration is REQUIRED to be disabled on some Windows GPUs for transparent windows to render
-app.disableHardwareAcceleration()
+// Hardware acceleration is required on Windows for transparent windows
+// app.disableHardwareAcceleration()
 
 // Single-instance lock — no duplicate fumii processes
 if (!app.requestSingleInstanceLock()) {
@@ -39,7 +47,7 @@ const SPRITE_H_OPEN   = 680
 // Moves the sprite window smoothly across the work area, like lenny-lil-agents.
 
 const WALK_SPEED_PX = 1.5     // px per tick
-const WALK_TICK_MS  = 16      // ~60 fps
+const WALK_TICK_MS  = 33      // ~30 fps (sufficient for slow walk animation)
 const PAUSE_MIN_MS  = 2500
 const PAUSE_MAX_MS  = 7000
 
@@ -47,6 +55,7 @@ let walkTarget:    number | null = null
 let walkTimerId:   ReturnType<typeof setInterval> | null = null
 let wanderPause:   ReturnType<typeof setTimeout>  | null = null
 let chatOpen       = false
+let isQuitting     = false
 let lastWalkDir: 'left' | 'right' | 'idle' = 'idle'
 
 function getWorkArea() {
@@ -195,8 +204,10 @@ function createDashboardWindow(): BrowserWindow {
   })
 
   win.on('close', (e) => {
-    e.preventDefault()
-    win.hide()
+    if (!isQuitting) {
+      e.preventDefault()
+      win.hide()
+    }
   })
 
   const devUrl = process.env['ELECTRON_RENDERER_URL']
@@ -241,7 +252,11 @@ app.whenReady().then(async () => {
     } else {
       const { x, y } = getSpritePos(false)
       spriteWindow.setBounds({ x, y, width: SPRITE_W_CLOSED, height: SPRITE_H_CLOSED })
-      setTimeout(() => spriteWindow?.setIgnoreMouseEvents(true, { forward: true }), 350)
+      setTimeout(() => {
+        if (spriteWindow && !spriteWindow.isDestroyed()) {
+          spriteWindow.setIgnoreMouseEvents(true, { forward: true })
+        }
+      }, 350)
       // Resume wander after chat closes
       startWander()
     }
@@ -290,7 +305,8 @@ app.whenReady().then(async () => {
   // ── Clear memory (confirmation dialog lives in main) ───────────────────
 
   ipcMain.handle('memory:clear-all', async () => {
-    const { response } = await dialog.showMessageBox(dashboardWindow!, {
+    if (!dashboardWindow || dashboardWindow.isDestroyed()) return false
+    const { response } = await dialog.showMessageBox(dashboardWindow, {
       type:      'warning',
       title:     'Clear all memory',
       message:   'This will erase everything fumii remembers about you.',
@@ -332,6 +348,10 @@ app.whenReady().then(async () => {
 // Keep app alive in tray even when all windows are closed
 app.on('window-all-closed', () => {
   // intentionally empty — quit only via tray → Quit
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
 })
 
 app.on('will-quit', () => {

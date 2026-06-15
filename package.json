@@ -7,6 +7,8 @@
     "url": "https://github.com/fumii/fumii.git"
   },
   "private": true,
+  "author": "fumii contributors",
+  "license": "MIT",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",

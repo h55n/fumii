@@ -113,8 +113,19 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
 
     } catch (err) {
       finalizeMessage(assistantId)
+      const errMsg = err instanceof Error ? err.message : String(err)
+      let userMessage = 'something went wrong — check your API key in settings'
+      if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized')) {
+        userMessage = 'invalid or missing API key — check settings'
+      } else if (errMsg.includes('timeout') || errMsg.includes('timed out')) {
+        userMessage = 'response timed out — try again or switch to a different model'
+      } else if (errMsg.includes('already in progress')) {
+        userMessage = 'still processing the last message — please wait'
+      } else if (errMsg.includes('ECONNREFUSED') || errMsg.includes('fetch failed')) {
+        userMessage = 'can\'t reach the LLM server — check your connection or if Ollama is running'
+      }
       if (!fullResponse) {
-        updateMessage(assistantId, 'something went wrong — check your API key in settings')
+        updateMessage(assistantId, userMessage)
       }
       setSpriteState('concerned')
     } finally {

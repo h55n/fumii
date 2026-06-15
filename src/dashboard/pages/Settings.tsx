@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useSettingsStore } from '../../store/settingsStore'
+import { useSettingsStore, SettingKey } from '../../store/settingsStore'
 
 // ── Debounced save hook ────────────────────────────────────────────────────
 
-function useDebouncedSave(key: string, value: string, delay = 600) {
+function useDebouncedSave(key: SettingKey, value: string, delay = 600) {
   const { set } = useSettingsStore()
   const timer = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => set(key as any, value), delay)
+    timer.current = setTimeout(() => set(key, value), delay)
     return () => { if (timer.current) clearTimeout(timer.current) }
   }, [value])
 }
@@ -134,7 +134,7 @@ export function Settings() {
   const handleDetectClaude = async () => {
     setClaudeDetecting(true)
     try {
-      const result = await (window.fumiiAPI.settings as any).detectClaudeCode()
+      const result = await window.fumiiAPI.settings.detectClaudeCode()
       setClaudeStatus(result)
     } catch {
       setClaudeStatus({ found: false, path: null })
@@ -144,7 +144,7 @@ export function Settings() {
   }
 
   const handleSaveClaudePath = () => {
-    set('claude_code_path' as any, claudePathOverride)
+    set('claude_code_path', claudePathOverride)
   }
 
   const defaultModels: Record<string, string> = {
@@ -254,7 +254,7 @@ export function Settings() {
               <span style={{ color: 'var(--color-danger)' }}>
                 Claude Code CLI not found.{' '}
                 <button
-                  onClick={() => (window as any).open?.('https://claude.ai/code', '_blank')}
+                  onClick={() => window.fumiiAPI.openExternal('https://claude.ai/code')}
                   style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: 13, padding: 0, textDecoration: 'underline' }}
                 >
                   install at claude.ai/code
@@ -393,7 +393,7 @@ export function Settings() {
               <button
                 key={theme.id}
                 id={`theme-swatch-${theme.id}`}
-                onClick={() => set('chat_theme' as any, theme.id)}
+                onClick={() => set('chat_theme', theme.id)}
                 title={theme.label}
                 style={{
                   display:      'flex',

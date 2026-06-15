@@ -88,11 +88,15 @@ export function getCoreIdentity(): CoreIdentity | null {
   return db.prepare('SELECT * FROM core_identity WHERE id = 1').get() as CoreIdentity | null
 }
 
+const IDENTITY_COLUMNS = new Set(['name', 'age_hint', 'mood_baseline', 'key_context', 'updated_at'])
+
 export function setCoreIdentity(data: Partial<CoreIdentity>): void {
   const fields = Object.keys(data)
-    .filter(k => k !== 'id' && k !== 'created_at')
+    .filter(k => k !== 'id' && k !== 'created_at' && IDENTITY_COLUMNS.has(k))
     .map(k => `${k} = @${k}`)
     .join(', ')
+
+  if (!fields) return // nothing valid to update
 
   db.prepare(`
     UPDATE core_identity SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = 1
@@ -111,10 +115,11 @@ export function searchEpisodes(query: string): Episode[] {
   if (!query.trim()) return getEpisodes(20)
   const terms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2)
   if (terms.length === 0) return []
-  const conditions = terms.map(t => `(tags LIKE '%${t}%' OR summary LIKE '%${t}%')`).join(' OR ')
+  const conditions = terms.map(() => `(tags LIKE ? OR summary LIKE ?)`).join(' OR ')
+  const params = terms.flatMap(t => [`%${t}%`, `%${t}%`])
   return db.prepare(
     `SELECT * FROM episodes WHERE ${conditions} ORDER BY created_at DESC LIMIT 20`
-  ).all() as Episode[]
+  ).all(...params) as Episode[]
 }
 
 export function insertEpisode(
@@ -126,7 +131,7 @@ export function insertEpisode(
   const result = db.prepare(
     'INSERT INTO episodes (summary, tags, mood_signal, turn_count) VALUES (?, ?, ?, ?)'
   ).run(summary, tags, mood_signal, turn_count)
-  return result.lastInsertRowid as number
+  return Number(result.lastInsertRowid)
 }
 
 export function fetchRelevantEpisodes(userMessage: string, limit = 3): Episode[] {
@@ -142,10 +147,11 @@ export function fetchRelevantEpisodes(userMessage: string, limit = 3): Episode[]
 
   if (keywords.length === 0) return []
 
-  const conditions = keywords.map(k => `tags LIKE '%${k}%'`).join(' OR ')
+  const conditions = keywords.map(() => `tags LIKE ?`).join(' OR ')
+  const params = keywords.map(k => `%${k}%`)
   return db.prepare(
     `SELECT * FROM episodes WHERE ${conditions} ORDER BY created_at DESC LIMIT ?`
-  ).all(limit) as Episode[]
+  ).all(...params, limit) as Episode[]
 }
 
 // ── Mood Log ───────────────────────────────────────────────────────────────
@@ -209,10 +215,13 @@ export function getAllSettings(): Record<string, string> {
 // ── Clear All ──────────────────────────────────────────────────────────────
 
 export function clearAllMemory(): void {
-  db.exec(`
-    DELETE FROM episodes;
-    DELETE FROM transcripts;
-    DELETE FROM mood_log;
-    UPDATE core_identity SET name='', age_hint='', mood_baseline='', key_context='{}', updated_at=CURRENT_TIMESTAMP WHERE id=1;
-  `)
+  const clearTransaction = db.transaction(() => {
+    db.exec(`
+      DELETE FROM transcripts;
+      DELETE FROM episodes;
+      DELETE FROM mood_log;
+      UPDATE core_identity SET name='', age_hint='', mood_baseline='', key_context='{}', updated_at=CURRENT_TIMESTAMP WHERE id=1;
+    `)
+  })
+  clearTransaction()
 }

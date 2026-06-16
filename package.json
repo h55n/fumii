@@ -1,6 +1,6 @@
 {
   "name": "fumii",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "you're never really alone — a desktop AI companion",
   "repository": {
     "type": "git",
@@ -13,7 +13,8 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "dist": "npm run build && electron-builder",
+    "dist": "node scripts/generate-icon.js && npm run build && electron-builder",
+    "generate-icon": "node scripts/generate-icon.js",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "postinstall": "node scripts/generate-placeholder-assets.js && npx @electron/rebuild -f -w better-sqlite3 -w keytar",
@@ -42,6 +43,7 @@
     "electron-vite": "^2.3.0",
     "sharp": "^0.35.1",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "vitest": "^4.1.9"
   }
 }

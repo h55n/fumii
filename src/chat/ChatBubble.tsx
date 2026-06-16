@@ -11,7 +11,7 @@ interface ChatBubbleProps {
 // Uses marked (MIT) + DOMPurify for safe HTML output in fumii's assistant bubbles.
 
 // Configure marked once
-marked.setOptions({ breaks: true, gfm: true })
+marked.setOptions({ breaks: true, gfm: true, async: false })
 
 function renderMarkdown(content: string): string {
   try {

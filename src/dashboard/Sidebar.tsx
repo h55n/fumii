@@ -27,17 +27,20 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <aside style={{
       width: 220,
+      height: '100%',
       background: 'var(--color-bg)',
       borderRight: '1px solid var(--color-border)',
       display: 'flex',
       flexDirection: 'column',
       padding: '20px 0',
-      flexShrink: 0
+      flexShrink: 0,
+      overflow: 'hidden'
     }}>
       {/* fumii wordmark */}
       <div style={{
         padding: '0 20px 24px',
-        marginBottom: 8
+        marginBottom: 8,
+        flexShrink: 0
       }}>
         <div style={{
           fontFamily: 'var(--font-display)',
@@ -56,8 +59,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         }}>you're never really alone</div>
       </div>
 
-      {/* Nav items */}
-      <nav style={{ flex: 1, padding: '0 10px' }}>
+      {/* Nav items — scrollable so they never push agent panel off-screen */}
+      <nav style={{ flex: 1, padding: '0 10px', overflowY: 'auto', minHeight: 0 }}>
         {NAV_ITEMS.map(item => {
           const active = currentPage === item.id
           const hovered = hoveredItem === item.id
@@ -101,10 +104,12 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      {/* Lenny Controls */}
+      {/* Agent Controls — always pinned at bottom, flexShrink:0 prevents it from being pushed off-screen */}
       <div style={{
-        padding: '0 14px',
-        marginBottom: 16
+        padding: '12px 14px 12px',
+        flexShrink: 0,
+        borderTop: '1px solid var(--color-border)',
+        marginTop: 8
       }}>
         <div style={{
           fontSize: 10,
@@ -126,7 +131,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             display: 'inline-block',
             animation: lennyStatus === 'awake' ? 'pulse-dot 2s ease-in-out infinite' : 'none'
           }} />
-          Lenny · {lennyStatus === 'awake' ? 'Active' : 'Sleeping'}
+          agent · {lennyStatus === 'awake' ? 'active' : 'sleeping'}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
@@ -159,7 +164,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               e.currentTarget.style.borderColor = 'var(--color-border)'
             }}
           >
-            ☀ Wake
+            ☀ wake
           </button>
           <button
             onClick={() => window.fumiiAPI?.sprite?.sleep()}
@@ -191,22 +196,22 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               e.currentTarget.style.borderColor = 'var(--color-border)'
             }}
           >
-            🌙 Sleep
+            🌙 sleep
           </button>
         </div>
       </div>
 
       {/* Footer */}
       <div style={{
-        padding: '12px 20px 0',
-        borderTop: '1px solid var(--color-border)',
+        padding: '8px 20px 0',
+        flexShrink: 0,
         fontFamily: 'var(--font-mono)',
         fontSize: 10,
         color: 'var(--color-text-secondary)',
         letterSpacing: '0.04em',
         opacity: 0.6
       }}>
-        v1.0.0 — phase 1
+        v1.0.4 — phase 1
       </div>
     </aside>
   )

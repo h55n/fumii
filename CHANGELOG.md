@@ -2,7 +2,14 @@
 
 All notable changes to the `fumii` project, from initialization to the current release, are documented here.
 
-## [v1.0.3] - 2026-06-14 (Current Release)
+## [v1.0.4] - 2026-06-16 (Current Release)
+### Bug Fixes & Polish
+- **App Icon:** Fixed an issue where the Windows installer and application used the default Electron icon. Implemented a sharp-based multi-resolution `icon.ico` generator during the build pipeline and wired it into `electron-builder`.
+- **Agent Controls:** Fixed a sidebar layout flex overflow issue that caused the "agent" (Lenny) controls at the bottom of the dashboard to be pushed off-screen and rendered invisible on smaller window sizes.
+- **Chat Continuity:** Prevented chat history from clearing completely every time the chat window is toggled. Chat memory now correctly persists throughout an application session. Added an explicit "Clear Chat" button to the chat header for user-initiated resets.
+- **Markdown Rendering:** Fixed a `marked.js` configuration issue that caused the LLM's assistant messages to render as `[object Promise]` instead of formatted HTML.
+
+## [v1.0.3] - 2026-06-14
 ### Initialization & Architecture
 - **Project Setup:** Initialized the codebase using `electron-vite` (React + TypeScript).
 - **Core Architecture:** Set up a dual-window system: a transparent, frameless, click-through window for the desktop sprite, and a standard framed window for the main dashboard.

@@ -10,7 +10,7 @@ import { checkSleepState } from './EmotionState'
 
 export function SpriteWindow() {
   const { spriteState, setSpriteState, lastInteractionTime, updateInteractionTime } = useAppStore()
-  const { isOpen, setOpen, clearMessages } = useChatStore()
+  const { isOpen, setOpen } = useChatStore()
   const { load: loadSettings, get } = useSettingsStore()
   const [walkDirection, setWalkDirection] = useState<WalkDirection>('idle')
 
@@ -68,11 +68,10 @@ export function SpriteWindow() {
     window.fumiiAPI?.sprite.toggleChat(open)
     updateInteractionTime()
     setSpriteState(open ? 'listening' : 'idle')
-    // Clear messages when chat closes to reset session
-    if (!open) {
-      clearMessages()
-    }
-  }, [setOpen, updateInteractionTime, setSpriteState, clearMessages])
+    // NOTE: we do NOT clear messages on close — conversation persists within a session.
+    // Messages are cleared only via the explicit "clear chat" button in ChatOverlay,
+    // or when the main process fires 'memory:cleared'.
+  }, [setOpen, updateInteractionTime, setSpriteState])
 
   const handleMouseEnter = () => {
     window.fumiiAPI?.sprite.setMouseEvents(true)

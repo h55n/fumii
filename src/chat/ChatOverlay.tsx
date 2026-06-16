@@ -186,20 +186,47 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
             color:       'var(--color-text-secondary)'
           }}>{isStreaming ? 'thinking...' : 'here'}</span>
         </div>
-        <button
-          onClick={handleClose}
-          style={{
-            background: 'none',
-            border:     'none',
-            color:      'var(--color-text-secondary)',
-            cursor:     'pointer',
-            fontSize:   18,
-            lineHeight: 1,
-            padding:    '2px 6px',
-            borderRadius: 4,
-            fontFamily: 'var(--font-display)'
-          }}
-        >×</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => {
+              if (confirm('Clear the current conversation?')) {
+                clearMessages()
+              }
+            }}
+            title="Clear Chat"
+            style={{
+              background: 'none',
+              border:     'none',
+              color:      'var(--color-text-secondary)',
+              cursor:     'pointer',
+              fontSize:   14,
+              lineHeight: 1,
+              padding:    '2px 6px',
+              borderRadius: 4,
+              fontFamily: 'var(--font-display)',
+              transition: 'color 150ms'
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+          >⟳</button>
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'none',
+              border:     'none',
+              color:      'var(--color-text-secondary)',
+              cursor:     'pointer',
+              fontSize:   18,
+              lineHeight: 1,
+              padding:    '2px 6px',
+              borderRadius: 4,
+              fontFamily: 'var(--font-display)',
+              transition: 'color 150ms'
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+          >×</button>
+        </div>
       </div>
 
       {/* Messages */}

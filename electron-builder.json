@@ -2,6 +2,7 @@
   "appId": "com.fumii.app",
   "productName": "fumii",
   "copyright": "fumii contributors",
+  "icon": "build/icon.png",
   "directories": {
     "output": "release",
     "buildResources": "build"
@@ -19,6 +20,7 @@
   ],
   "win": {
     "target":          [{ "target": "nsis", "arch": ["x64"] }],
+    "icon":            "build/icon.ico",
     "requestedExecutionLevel": "asInvoker",
     "artifactName":   "${productName}-setup-${version}.${ext}"
   },

@@ -21,13 +21,12 @@
   "win": {
     "target":          [{ "target": "nsis", "arch": ["x64"] }],
     "icon":            "build/icon.ico",
-    "requestedExecutionLevel": "asInvoker",
     "artifactName":   "${productName}-setup-${version}.${ext}"
   },
   "nsis": {
-    "oneClick":                true,
-    "perMachine":              false,
-    "allowToChangeInstallationDirectory": false,
+    "oneClick":                false,
+    "perMachine":              true,
+    "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": false,
     "createDesktopShortcut":   true,
     "createStartMenuShortcut": true

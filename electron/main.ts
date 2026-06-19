@@ -18,9 +18,14 @@ process.on('unhandledRejection', (reason) => {
 
 // Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
-// Hardware acceleration is REQUIRED to be disabled on some Windows GPUs for transparent windows to render
-// Hardware acceleration is required on Windows for transparent windows
-// app.disableHardwareAcceleration()
+
+// GPU crash fix for Windows transparent windows (exception code 0x80000003).
+// The GPU process crashes on certain Windows + driver configurations when using
+// layered/transparent windows. These switches fix it without fully disabling
+// hardware acceleration (which would break transparency).
+app.commandLine.appendSwitch('disable-gpu-sandbox')
+app.commandLine.appendSwitch('disable-software-rasterizer')
+app.commandLine.appendSwitch('no-sandbox')
 
 // Single-instance lock — no duplicate fumii processes
 if (!app.requestSingleInstanceLock()) {

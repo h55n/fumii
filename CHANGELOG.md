@@ -2,17 +2,8 @@
 
 All notable changes to the `fumii` project, from initialization to the current release, are documented here.
 
-## [v1.0.5] - 2026-06-19 (Current Release)
-### Features & Redesign
-- **Dark Mode Overhaul:** Redesigned the entire dashboard interface to a premium dark theme. Replaced flat styling with deep `#0D0F14` backgrounds, glassmorphism, and subtle layout borders.
-- **Enhanced Sidebar:** Upgraded sidebar items with crisp SVG icons (replacing unicode characters), dynamic active pill indicators, and a vibrant violet-to-pink gradient wordmark.
-- **Premium Agent Controls:** Revamped the Lenny Wake/Sleep panel using structured pill buttons, hover state transitions, and a pulsating status dot.
-
-### Bug Fixes
-- **Fatal GPU Crash:** Resolved an issue where transparent windows caused the application to instantly crash (Exception `0x80000003`) by appending surgical Chromium switches (`--disable-gpu-sandbox`, `--disable-software-rasterizer`, `--no-sandbox`) without breaking transparency.
-- **Native ABI Mismatch:** Fixed a critical bug causing silent failures during the NSIS installer launch by forcing `@electron/rebuild` to synchronize `better-sqlite3` and `keytar` native modules to `NODE_MODULE_VERSION 121` (Electron 29.4.6).
-
-## [v1.0.4] - 2026-06-16
+## [v1.0.4] - 2026-06-16 (Current Release)
+### Bug Fixes & Polish
 - **App Icon:** Fixed an issue where the Windows installer and application used the default Electron icon. Implemented a sharp-based multi-resolution `icon.ico` generator during the build pipeline and wired it into `electron-builder`.
 - **Agent Controls:** Fixed a sidebar layout flex overflow issue that caused the "agent" (Lenny) controls at the bottom of the dashboard to be pushed off-screen and rendered invisible on smaller window sizes.
 - **Chat Continuity:** Prevented chat history from clearing completely every time the chat window is toggled. Chat memory now correctly persists throughout an application session. Added an explicit "Clear Chat" button to the chat header for user-initiated resets.

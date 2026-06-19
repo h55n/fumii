@@ -62,24 +62,21 @@ export function DashboardApp() {
           position:   'fixed',
           top: 0, left: 0, right: 0,
           height:     38,
-          background: 'var(--color-sidebar, #0A0C11)',
+          background: 'var(--color-bg)',
           display:    'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding:    '0 16px',
           zIndex:     200,
-          borderBottom: '1px solid rgba(255,255,255,0.05)'
+          borderBottom: '1px solid var(--color-border)'
         }}
       >
         <span style={{
           fontFamily:    'var(--font-display)',
           fontSize:       13,
           fontWeight:     700,
-          letterSpacing: '-0.03em',
-          background: 'linear-gradient(135deg, #A78BFA 0%, #7C6EFA 50%, #EC4899 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
+          color:          'var(--color-primary)',
+          letterSpacing: '-0.02em'
         }}>fumii</span>
 
         {/* Window controls — macOS-style dots */}

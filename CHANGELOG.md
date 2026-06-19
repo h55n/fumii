@@ -2,7 +2,13 @@
 
 All notable changes to the `fumii` project, from initialization to the current release, are documented here.
 
-## [v1.0.4] - 2026-06-16 (Current Release)
+## [v1.0.5] - 2026-06-19 (Current Release)
+### Bug Fixes & Polish
+- **Installer & Native Modules:** Fixed silent application crashes at startup that caused the NSIS installer to fail. Rebuilt native modules (`better-sqlite3`, `keytar`) specifically targeting Electron 29 (NODE_MODULE_VERSION 121) to resolve ABI mismatches.
+- **GPU Acceleration Crash:** Fixed a critical issue on Windows where transparent/layered windows caused the GPU process to crash (`0x80000003` / `STATUS_BREAKPOINT`). Added targeted Chromium command-line switches (`--disable-gpu-sandbox`, `--no-sandbox`, `--disable-software-rasterizer`) to preserve transparency while preventing crashes.
+- **Dashboard UI:** Replaced random, visually inconsistent Unicode glyphs in the Sidebar with a harmonious, hand-tuned SVG icon set (16x16, 1.5px stroke, round caps/joins) matching modern design systems.
+
+## [v1.0.4] - 2026-06-16
 ### Bug Fixes & Polish
 - **App Icon:** Fixed an issue where the Windows installer and application used the default Electron icon. Implemented a sharp-based multi-resolution `icon.ico` generator during the build pipeline and wired it into `electron-builder`.
 - **Agent Controls:** Fixed a sidebar layout flex overflow issue that caused the "agent" (Lenny) controls at the bottom of the dashboard to be pushed off-screen and rendered invisible on smaller window sizes.

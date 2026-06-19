@@ -6,12 +6,48 @@ interface SidebarProps {
   onNavigate: (page: Page) => void
 }
 
-const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
-  { id: 'home',          label: 'Home',          icon: '◈' },
-  { id: 'memory',        label: 'Memory',         icon: '◇' },
-  { id: 'mood',          label: 'Mood',           icon: '◌' },
-  { id: 'conversations', label: 'Conversations',  icon: '◎' },
-  { id: 'settings',      label: 'Settings',       icon: '◉' }
+// SVG icons — clean, minimal, consistent stroke width
+const ICONS: Record<string, React.ReactNode> = {
+  home: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  ),
+  memory: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a10 10 0 1 0 10 10"/>
+      <path d="M12 6v6l4 2"/>
+      <path d="M20 2v6h-6"/>
+    </svg>
+  ),
+  mood: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+      <line x1="9" y1="9" x2="9.01" y2="9"/>
+      <line x1="15" y1="9" x2="15.01" y2="9"/>
+    </svg>
+  ),
+  conversations: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+  settings: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+}
+
+const NAV_ITEMS: { id: Page; label: string }[] = [
+  { id: 'home',          label: 'Home'          },
+  { id: 'memory',        label: 'Memory'        },
+  { id: 'mood',          label: 'Mood'          },
+  { id: 'conversations', label: 'Conversations' },
+  { id: 'settings',      label: 'Settings'      },
 ]
 
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
@@ -26,44 +62,76 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
   return (
     <aside style={{
-      width: 220,
+      width: 224,
       height: '100%',
-      background: 'var(--color-bg)',
-      borderRight: '1px solid var(--color-border)',
+      background: 'var(--color-sidebar, #0A0C11)',
+      borderRight: '1px solid var(--color-sidebar-border, rgba(255,255,255,0.06))',
       display: 'flex',
       flexDirection: 'column',
-      padding: '20px 0',
       flexShrink: 0,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      position: 'relative',
     }}>
-      {/* fumii wordmark */}
+
+      {/* Subtle top glow */}
       <div style={{
-        padding: '0 20px 24px',
-        marginBottom: 8,
-        flexShrink: 0
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: 120,
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(124,110,250,0.08) 0%, transparent 70%)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
+
+      {/* Wordmark */}
+      <div style={{
+        padding: '28px 20px 24px',
+        flexShrink: 0,
+        position: 'relative',
+        zIndex: 1,
       }}>
         <div style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: 700,
-          color: 'var(--color-primary)',
-          letterSpacing: '-0.03em'
+          letterSpacing: '-0.04em',
+          background: 'linear-gradient(135deg, #A78BFA 0%, #7C6EFA 50%, #EC4899 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          lineHeight: 1,
+          marginBottom: 6,
         }}>fumii</div>
         <div style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 11,
+          fontSize: 10.5,
           color: 'var(--color-text-secondary)',
-          letterSpacing: '0.02em',
-          marginTop: 3,
-          opacity: 0.8
+          letterSpacing: '0.01em',
+          fontWeight: 400,
         }}>you're never really alone</div>
       </div>
 
-      {/* Nav items — scrollable so they never push agent panel off-screen */}
-      <nav style={{ flex: 1, padding: '0 10px', overflowY: 'auto', minHeight: 0 }}>
+      {/* Divider */}
+      <div style={{
+        height: 1,
+        margin: '0 16px 12px',
+        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)',
+        flexShrink: 0,
+      }} />
+
+      {/* Nav */}
+      <nav style={{
+        flex: 1,
+        padding: '4px 10px',
+        overflowY: 'auto',
+        minHeight: 0,
+        position: 'relative',
+        zIndex: 1,
+      }}>
         {NAV_ITEMS.map(item => {
-          const active = currentPage === item.id
+          const active  = currentPage === item.id
           const hovered = hoveredItem === item.id
+
           return (
             <button
               key={item.id}
@@ -74,9 +142,9 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 width: '100%',
                 padding: '9px 12px',
                 background: active
-                  ? 'var(--color-primary-soft)'
+                  ? 'rgba(124, 110, 250, 0.14)'
                   : hovered
-                    ? 'rgba(45, 107, 177, 0.05)'
+                    ? 'rgba(255, 255, 255, 0.04)'
                     : 'transparent',
                 border: 'none',
                 borderRadius: 8,
@@ -84,135 +152,182 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 alignItems: 'center',
                 gap: 10,
                 cursor: 'pointer',
-                color: active ? 'var(--color-primary)' : hovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                color: active
+                  ? '#A78BFA'
+                  : hovered
+                    ? 'rgba(240, 242, 255, 0.85)'
+                    : 'var(--color-text-secondary)',
                 fontFamily: 'var(--font-display)',
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
                 textAlign: 'left',
                 marginBottom: 2,
-                transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'
+                transition: 'all 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative',
               }}
             >
+              {/* Active left-bar indicator */}
+              {active && (
+                <span style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 3,
+                  height: 20,
+                  borderRadius: '0 3px 3px 0',
+                  background: 'linear-gradient(180deg, #A78BFA, #7C6EFA)',
+                  boxShadow: '0 0 8px rgba(124,110,250,0.5)',
+                }} />
+              )}
               <span style={{
-                fontSize: 14,
-                opacity: active ? 1 : 0.6,
-                transition: 'opacity 180ms'
-              }}>{item.icon}</span>
+                opacity: active ? 1 : hovered ? 0.7 : 0.45,
+                transition: 'opacity 160ms',
+                display: 'flex',
+                alignItems: 'center',
+              }}>
+                {ICONS[item.id]}
+              </span>
               {item.label}
             </button>
           )
         })}
       </nav>
 
-      {/* Agent Controls — always pinned at bottom, flexShrink:0 prevents it from being pushed off-screen */}
+      {/* Agent Controls */}
       <div style={{
-        padding: '12px 14px 12px',
+        padding: '12px 12px 14px',
         flexShrink: 0,
-        borderTop: '1px solid var(--color-border)',
-        marginTop: 8
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        position: 'relative',
+        zIndex: 1,
       }}>
+        {/* Agent status label */}
         <div style={{
-          fontSize: 10,
-          fontFamily: 'var(--font-display)',
-          color: 'var(--color-text-secondary)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          marginBottom: 8,
-          fontWeight: 500,
           display: 'flex',
           alignItems: 'center',
-          gap: 6
+          gap: 7,
+          marginBottom: 10,
+          padding: '0 2px',
         }}>
           <span style={{
             width: 6,
             height: 6,
             borderRadius: '50%',
-            background: lennyStatus === 'awake' ? '#34C749' : 'var(--color-text-secondary)',
+            background: lennyStatus === 'awake' ? '#34D399' : 'rgba(255,255,255,0.2)',
             display: 'inline-block',
-            animation: lennyStatus === 'awake' ? 'pulse-dot 2s ease-in-out infinite' : 'none'
+            flexShrink: 0,
+            boxShadow: lennyStatus === 'awake' ? '0 0 6px rgba(52, 211, 153, 0.6)' : 'none',
+            animation: lennyStatus === 'awake' ? 'pulse-dot 2.5s ease-in-out infinite' : 'none',
           }} />
-          agent · {lennyStatus === 'awake' ? 'active' : 'sleeping'}
+          <span style={{
+            fontSize: 10,
+            fontFamily: 'var(--font-display)',
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            fontWeight: 500,
+          }}>
+            agent · <span style={{ color: lennyStatus === 'awake' ? '#34D399' : 'var(--color-text-muted, rgba(240,242,255,0.25))' }}>
+              {lennyStatus === 'awake' ? 'active' : 'sleeping'}
+            </span>
+          </span>
         </div>
+
+        {/* Wake / Sleep buttons */}
         <div style={{ display: 'flex', gap: 6 }}>
-          <button
+          <AgentButton
+            label="Wake"
+            emoji="☀"
             onClick={() => window.fumiiAPI?.sprite?.wake()}
-            style={{
-              flex: 1,
-              background: lennyStatus === 'awake' ? 'var(--color-surface-raised)' : 'var(--color-primary-soft)',
-              border: '1px solid var(--color-border)',
-              color: lennyStatus === 'awake' ? 'var(--color-text-secondary)' : 'var(--color-primary)',
-              padding: '7px 0',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: 12,
-              fontFamily: 'var(--font-display)',
-              fontWeight: 500,
-              transition: 'all 180ms ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--color-accent)'
-              e.currentTarget.style.color = 'var(--color-text-primary)'
-              e.currentTarget.style.borderColor = 'var(--color-accent)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = lennyStatus === 'awake' ? 'var(--color-surface-raised)' : 'var(--color-primary-soft)'
-              e.currentTarget.style.color = lennyStatus === 'awake' ? 'var(--color-text-secondary)' : 'var(--color-primary)'
-              e.currentTarget.style.borderColor = 'var(--color-border)'
-            }}
-          >
-            ☀ wake
-          </button>
-          <button
+            variant={lennyStatus === 'awake' ? 'active' : 'primary'}
+          />
+          <AgentButton
+            label="Sleep"
+            emoji="🌙"
             onClick={() => window.fumiiAPI?.sprite?.sleep()}
-            style={{
-              flex: 1,
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-secondary)',
-              padding: '7px 0',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: 12,
-              fontFamily: 'var(--font-display)',
-              fontWeight: 500,
-              transition: 'all 180ms ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(229, 62, 62, 0.08)'
-              e.currentTarget.style.color = 'var(--color-danger)'
-              e.currentTarget.style.borderColor = 'rgba(229, 62, 62, 0.2)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--color-surface)'
-              e.currentTarget.style.color = 'var(--color-text-secondary)'
-              e.currentTarget.style.borderColor = 'var(--color-border)'
-            }}
-          >
-            🌙 sleep
-          </button>
+            variant="danger"
+          />
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer version */}
       <div style={{
-        padding: '8px 20px 0',
+        padding: '6px 16px 12px',
         flexShrink: 0,
         fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-        color: 'var(--color-text-secondary)',
-        letterSpacing: '0.04em',
-        opacity: 0.6
+        fontSize: 9.5,
+        color: 'var(--color-text-muted, rgba(240,242,255,0.2))',
+        letterSpacing: '0.06em',
+        position: 'relative',
+        zIndex: 1,
       }}>
-        v1.0.4 — phase 1
+        v1.0.5 · phase 1
       </div>
     </aside>
+  )
+}
+
+// ─── Sub-component: agent action button ─────────────────────────────────────
+
+interface AgentButtonProps {
+  label: string
+  emoji: string
+  onClick: () => void
+  variant: 'primary' | 'active' | 'danger'
+}
+
+function AgentButton({ label, emoji, onClick, variant }: AgentButtonProps) {
+  const [hov, setHov] = useState(false)
+
+  const bg = hov
+    ? variant === 'danger'
+      ? 'rgba(248, 113, 113, 0.12)'
+      : 'rgba(124, 110, 250, 0.18)'
+    : variant === 'active'
+      ? 'rgba(255,255,255,0.04)'
+      : 'rgba(124, 110, 250, 0.08)'
+
+  const col = hov
+    ? variant === 'danger'
+      ? '#F87171'
+      : '#A78BFA'
+    : variant === 'active'
+      ? 'rgba(240,242,255,0.35)'
+      : '#7C6EFA'
+
+  const border = hov
+    ? variant === 'danger'
+      ? 'rgba(248, 113, 113, 0.25)'
+      : 'rgba(124,110,250,0.35)'
+    : 'rgba(255,255,255,0.07)'
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        flex: 1,
+        background: bg,
+        border: `1px solid ${border}`,
+        color: col,
+        padding: '7px 0',
+        borderRadius: 7,
+        cursor: 'pointer',
+        fontSize: 11.5,
+        fontFamily: 'var(--font-display)',
+        fontWeight: 500,
+        transition: 'all 160ms ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        letterSpacing: '0.01em',
+      }}
+    >
+      <span style={{ fontSize: 12 }}>{emoji}</span>
+      {label}
+    </button>
   )
 }

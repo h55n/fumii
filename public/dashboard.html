@@ -10,30 +10,53 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <style>
+    /* ── Google Fonts ─────────────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
     /* ── Design tokens ────────────────────────────────────────────────── */
     :root {
-      --color-bg:             #FCFCF0;
-      --color-surface:        #F5F5E8;
-      --color-surface-raised: #EDEEDD;
-      --color-primary:        #2D6BB1;
-      --color-primary-soft:   rgba(45, 107, 177, 0.10);
-      --color-accent:         #BAC98D;
-      --color-sage:           #BAC98D;
-      --color-yellow:         #EEE29E;
-      --color-text-primary:   #1A2433;
-      --color-text-secondary: #6B7B8D;
-      --color-text-fumii:     #2D6BB1;
-      --color-border:         rgba(45, 107, 177, 0.12);
-      --color-danger:         #E53E3E;
-      --glow-primary: 0 0 20px rgba(45, 107, 177, 0.22), 0 0 60px rgba(45, 107, 177, 0.08);
-      --font-display: 'DM Sans', system-ui, sans-serif;
-      --font-mono:    'Departure Mono', 'Courier New', monospace;
-      --radius-sm:   8px;
-      --radius-md:   12px;
-      --radius-lg:   20px;
+      /* Core dark palette */
+      --color-bg:             #0D0F14;
+      --color-surface:        #13151C;
+      --color-surface-raised: #1C1F2A;
+      --color-surface-hover:  #222536;
+
+      /* Sidebar gets its own deeper shade */
+      --color-sidebar:        #0A0C11;
+      --color-sidebar-border: rgba(255,255,255,0.06);
+
+      /* Brand: vibrant indigo/violet */
+      --color-primary:        #7C6EFA;
+      --color-primary-soft:   rgba(124, 110, 250, 0.12);
+      --color-primary-glow:   rgba(124, 110, 250, 0.25);
+      --color-accent:         #A78BFA;
+      --color-accent-2:       #EC4899;
+
+      /* Text */
+      --color-text-primary:   #F0F2FF;
+      --color-text-secondary: rgba(240, 242, 255, 0.45);
+      --color-text-muted:     rgba(240, 242, 255, 0.25);
+
+      /* Functional */
+      --color-border:         rgba(255, 255, 255, 0.07);
+      --color-border-active:  rgba(124, 110, 250, 0.35);
+      --color-danger:         #F87171;
+      --color-success:        #34D399;
+
+      /* Typography */
+      --font-display: 'Inter', system-ui, sans-serif;
+      --font-mono:    'Courier New', monospace;
+
+      /* Spacing & radii */
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   16px;
       --radius-full: 9999px;
-      --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
-      --shadow-card-hover: 0 4px 16px rgba(45, 107, 177, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+
+      /* Shadows */
+      --shadow-card:       0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+      --shadow-card-hover: 0 4px 24px rgba(124, 110, 250, 0.15), 0 1px 4px rgba(0,0,0,0.4);
+      --glow-primary:      0 0 20px rgba(124, 110, 250, 0.3), 0 0 60px rgba(124, 110, 250, 0.1);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -52,8 +75,8 @@
 
     ::-webkit-scrollbar          { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track    { background: transparent; }
-    ::-webkit-scrollbar-thumb    { background: var(--color-surface-raised); border-radius: 2px; }
-    ::-webkit-scrollbar-thumb:hover { background: #D5D5C0; }
+    ::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
     .no-select { user-select: none; -webkit-user-select: none; }
     .drag-region { -webkit-app-region: drag; }
@@ -66,12 +89,12 @@
     }
 
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes scaleIn {
-      from { opacity: 0; transform: scale(0.95); }
+      from { opacity: 0; transform: scale(0.96); }
       to   { opacity: 1; transform: scale(1); }
     }
 
@@ -81,26 +104,32 @@
     }
 
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0.4; }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+      50%      { opacity: 0.8; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0); }
+    }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     .page-enter {
-      animation: slideUp 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: slideUp 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .card {
       background: var(--color-surface);
       border-radius: var(--radius-md);
-      border: 1px solid transparent;
+      border: 1px solid var(--color-border);
       box-shadow: var(--shadow-card);
-      transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+      transition: box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
     }
 
     .card:hover {
       box-shadow: var(--shadow-card-hover);
-      border-color: var(--color-border);
-      transform: translateY(-1px);
+      border-color: var(--color-border-active);
+      transform: translateY(-2px);
     }
 
     .stagger-1 { animation-delay: 0ms; }
@@ -109,7 +138,7 @@
     .stagger-4 { animation-delay: 180ms; }
     .stagger-5 { animation-delay: 240ms; }
 
-    /* Focus ring for inputs */
+    /* Focus ring */
     input:focus, select:focus, textarea:focus {
       border-color: var(--color-primary) !important;
       box-shadow: 0 0 0 3px var(--color-primary-soft);

@@ -63,6 +63,7 @@
 - [Getting Started](#getting-started)
 - [Build & Distribution](#build--distribution)
 - [Tech Stack](#tech-stack)
+- [Security Model](#security-model)
 - [What fumii Is Not](#what-fumii-is-not)
 
 ---
@@ -118,12 +119,12 @@ fumii fills the gap no product currently fills:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  The Loneliness Economy                                     │
-│                                                             │
-│  AI companion market 2024   ████████████░░░░  $28B         │
+│                                                               │
+│  AI companion market 2024   ████████████░░░░  $28B          │
 │  AI companion market 2030   ████████████████  $140B ~30% CAGR│
-│                                                             │
-│  Companion features → +120% dialogue engagement            │
-│  No product combines: physical + memory + personality       │
+│                                                               │
+│  Companion features → +120% dialogue engagement              │
+│  No product combines: physical + memory + personality        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -136,26 +137,25 @@ fumii fills the gap no product currently fills:
 This is the core of fumii. Everything else exists to serve it.
 
 ```
-                    ┌──────────────────────┐
-                    │   fumii Device       │
-                    │   (palm-sized)       │
-                    │                      │
-                    │  ┌──────────────┐   │
-                    │  │  Pixel Art   │   │  ← Tiny screen
-                    │  │  Face Screen │   │    showing fumii's
-                    │  │  [^_^]  ✦   │   │    animated face
-                    │  └──────────────┘   │
-                    │                      │
-                    │  🎙 Mic  🔊 Speaker  │  ← Always-on mic
-                    │                      │    warm speaker
-                    │  ⚙ Local LLM Brain  │  ← Small fine-tuned
-                    │                      │    model on-device
-                    │  🔵 BT / WiFi       │  ← Desktop sync
-                    │                      │
-                    │  ⚙⚙ Wheels          │  ← She can wander
-                    └──────────┬───────────┘
-                               │
-                    Rolls gently on your desk
+                    ┌────────────────────────┐
+                    │      fumii Device       │
+                    │      (palm-sized)       │
+                    │                          │
+                    │  ┌────────────────────┐  │
+                    │  │   Pixel Art        │  │  <- Tiny screen showing
+                    │  │   Face Screen      │  │     fumii's animated face
+                    │  │   [^_^]  *         │  │
+                    │  └────────────────────┘  │
+                    │                          │
+                    │  Mic (always-on)         │  <- Wake word + voice
+                    │  Speaker                 │  <- Warm voice output
+                    │  Local LLM Brain         │  <- Small fine-tuned
+                    │                          │     model, on-device
+                    │  Bluetooth / WiFi        │  <- Desktop sync
+                    │  Wheels + Motor          │  <- She can wander
+                    └────────────┬─────────────┘
+                                 │
+                      Rolls gently on your desk
 ```
 
 ### Hardware Components
@@ -184,31 +184,32 @@ This is the core of fumii. Everything else exists to serve it.
 ## How It All Works
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         The fumii Ecosystem                         │
-│                                                                     │
-│   ┌──────────────────┐         Bluetooth / WiFi                     │
-│   │  fumii Device    │◄────────────────────────────────────────────►│
-│   │  (on your desk)  │                                              │
-│   │                  │    ┌────────────────────────────────────┐    │
-│   │  ┌────────────┐  │    │       Desktop Companion App        │    │
-│   │  │ Pixel Face │  │    │  (Windows — always running)        │    │
-│   │  │  🎙 🔊     │  │    │                                    │    │
-│   │  │  ⚙ LLM    │  │    │  ┌─────────┐   ┌───────────────┐  │    │
-│   │  │  ⚙⚙ Wheels│  │    │  │ Sprite  │   │  Dashboard    │  │    │
-│   │  └────────────┘  │    │  │ Window  │   │  Memory Log   │  │    │
-│   └──────────────────┘    │  │  Chat   │   │  Mood Timeline│  │    │
-│                           │  └─────────┘   └───────────────┘  │    │
-│                           └────────────────────────────────────┘    │
-│                                        │                            │
-│                                        ▼                            │
-│                              ┌──────────────────┐                  │
-│                              │  Local SQLite DB  │                  │
-│                              │  (your memories   │                  │
-│                              │   never leave     │                  │
-│                              │   your machine)   │                  │
-│                              └──────────────────┘                  │
-└─────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                          The fumii Ecosystem                          │
+│                                                                         │
+│   ┌────────────────────┐          Bluetooth / WiFi                    │
+│   │   fumii Device      │◄──────────────────────────────────────────► │
+│   │   (on your desk)    │                                             │
+│   │                      │      ┌───────────────────────────────┐     │
+│   │   Pixel Face         │      │     Desktop Companion App      │     │
+│   │   Mic / Speaker       │      │   (Windows — always running)   │     │
+│   │   Local LLM            │      │                                 │     │
+│   │   Wheels                 │      │  ┌─────────┐  ┌────────────┐  │     │
+│   └────────────────────┘      │  │ Sprite  │  │ Dashboard  │  │     │
+│                                 │  │ Window  │  │ Memory Log │  │     │
+│                                 │  │  Chat   │  │ Mood       │  │     │
+│                                 │  │         │  │ Timeline   │  │     │
+│                                 │  └─────────┘  └────────────┘  │     │
+│                                 └───────────────┬───────────────┘     │
+│                                                 │                     │
+│                                                 ▼                     │
+│                                     ┌─────────────────────┐          │
+│                                     │  Local SQLite DB     │          │
+│                                     │  (your memories       │          │
+│                                     │   never leave          │          │
+│                                     │   your machine)         │          │
+│                                     └─────────────────────┘          │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 ### The Division of Intelligence
@@ -242,27 +243,27 @@ Every conversation assembles exactly three things:
 
 ┌────────────────────────────────────────────────────────┐
 │  Layer 1 — Core Identity  (~500 tokens, always loaded) │
-│                                                        │
-│  Your name, age range, current big context,           │
-│  key people in your life, mood baseline.              │
-│  Never fetched — always present.                      │
+│                                                          │
+│  Your name, age range, current big context,             │
+│  key people in your life, mood baseline.                │
+│  Never fetched — always present.                        │
 └────────────────────────────────────────────────────────┘
                         +
 ┌────────────────────────────────────────────────────────┐
-│  Layer 2 — Episodic Memory  (~300–400 tokens)          │
-│                                                        │
-│  Tagged conversation summaries.                       │
-│  Fetched by keyword match on what you just said.      │
-│  Max 3 episodes per request.                          │
-│  "that friend I told you about" → tag:friend loaded   │
+│  Layer 2 — Episodic Memory  (~300–400 tokens)           │
+│                                                          │
+│  Tagged conversation summaries.                          │
+│  Fetched by keyword match on what you just said.         │
+│  Max 3 episodes per request.                              │
+│  "that friend I told you about" → tag:friend loaded       │
 └────────────────────────────────────────────────────────┘
                         +
 ┌────────────────────────────────────────────────────────┐
-│  Layer 3 — Emotional State  (7-day rolling window)     │
-│                                                        │
-│  Not transcripts. Just signals.                       │
-│  "Mon: stressed. Tue: good. Wed: quiet"               │
-│  fumii calibrates tone without you re-explaining.     │
+│  Layer 3 — Emotional State  (7-day rolling window)      │
+│                                                          │
+│  Not transcripts. Just signals.                          │
+│  "Mon: stressed. Tue: good. Wed: quiet"                   │
+│  fumii calibrates tone without you re-explaining.          │
 └────────────────────────────────────────────────────────┘
 
   Total context added per request: ~800–1000 tokens
@@ -401,15 +402,15 @@ fumii Desktop App
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                     MAIN PROCESS                         │
-│  Window management  │  SQLite  │  LLM API  │  keytar     │
-│──────────────────── preload.ts (contextBridge) ─────────│
-├──────────────────────────┬───────────────────────────────┤
-│   RENDERER: Sprite       │   RENDERER: Dashboard         │
-│   Canvas 2D animation    │   React pages                 │
-│   Chat UI                │   Zustand stores              │
-│   Web Speech API         │   Data visualization          │
-└──────────────────────────┴───────────────────────────────┘
+│                     MAIN PROCESS                          │
+│  Window management  │  SQLite  │  LLM API  │  keytar      │
+│──────────────────── preload.ts (contextBridge) ───────────│
+├──────────────────────────┬──────────────────────────────  │
+│   RENDERER: Sprite       │   RENDERER: Dashboard          │
+│   Canvas 2D animation    │   React pages                  │
+│   Chat UI                │   Zustand stores                │
+│   Web Speech API         │   Data visualization             │
+└──────────────────────────┴──────────────────────────────  ┘
 ```
 
 | Layer | Process | Reason |
@@ -634,22 +635,11 @@ This makes fumii feel like she's **in a room**, not floating on a screen.
 
 And why fumii doesn't make the same mistakes:
 
-```
-╔══════════════╦═══════════════════════════════════╦══════════════════════════╗
-║  Product     ║  Why It Failed                    ║  fumii's Answer          ║
-╠══════════════╬═══════════════════════════════════╬══════════════════════════╣
-║  Rabbit R1   ║  Tried to replace your phone.     ║  Complements, not        ║
-║              ║  Broken AI agent with no face.    ║  replaces. Has a face.   ║
-╠══════════════╬═══════════════════════════════════╬══════════════════════════╣
-║  Humane Pin  ║  Screenless, overheated, $700 +   ║  Has a screen, a         ║
-║              ║  $24/month. No personality.       ║  character, works        ║
-║              ║                                   ║  offline. No sub fee.    ║
-╠══════════════╬═══════════════════════════════════╬══════════════════════════╣
-║  Friend      ║  A necklace with no screen.       ║  Physical presence on    ║
-║  Pendant     ║  No "there" there. No presence.   ║  your desk. Face you     ║
-║              ║                                   ║  can see. Moves.         ║
-╚══════════════╩═══════════════════════════════════╩══════════════════════════╝
-```
+| Product | Why It Failed | fumii's Answer |
+|---|---|---|
+| **Rabbit R1** | Tried to replace your phone. Broken AI agent with no face. | Complements, not replaces. Has a face. |
+| **Humane Pin** | Screenless, overheated, $700 + $24/month. No personality. | Has a screen, a character, works offline. No sub fee. |
+| **Friend Pendant** | A necklace with no screen. No "there" there. No presence. | Physical presence on your desk. Face you can see. Moves. |
 
 The bar is not "better than nothing." The bar is: **"does this do something my phone cannot?"**
 

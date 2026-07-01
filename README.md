@@ -25,8 +25,8 @@
 > ▶ *Click the thumbnail above to watch the demo on YouTube*
  
 <br/>
-[![Google Drive](https://img.shields.io/badge/📁%20Project%20Files-Google%20Drive-F5A623?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/drive/folders/17kJrMC85nZk7DcOUeabH6yuBQqmyWgyE?usp=sharing)
- 
+[![Google Drive](https://img.shields.io/badge/Project%20Files-Google%20Drive-F5A623?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/drive/folders/17kJrMC85nZk7DcOUeabH6yuBQqmyWgyE?usp=sharing)
+
 > *Full project files, assets, CAD & PCB files and build on Google Drive*
  
 ---

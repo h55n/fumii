@@ -1,55 +1,47 @@
 <div align="center">
 
-<!-- PIXEL ART LOGO -->
-<img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&size=48&duration=0&pause=0&color=F5A623&center=true&vCenter=true&width=600&height=90&lines=fumii" alt="fumii" />
+<img src="assets/banner.jpg" alt="fumii" width="100%" />
 
-```
-  ███████╗██╗   ██╗███╗   ███╗██╗██╗
-  ██╔════╝██║   ██║████╗ ████║██║██║
-  █████╗  ██║   ██║██╔████╔██║██║██║
-  ██╔══╝  ██║   ██║██║╚██╔╝██║██║██║
-  ██║     ╚██████╔╝██║ ╚═╝ ██║██║██║
-  ╚═╝      ╚═════╝ ╚═╝     ╚═╝╚═╝╚═╝
-```
+# fumii 🤖
 
-### ✦ *you're never really alone* ✦
+[GitHub](https://github.com/h55n/fumii) | [Releases](https://github.com/h55n/fumii/releases/tag/v2.0.0) | [Demo Video](https://youtu.be/OoZZ1LDStHE) | [Project Drive](https://drive.google.com/drive/folders/17kJrMC85nZk7DcOUeabH6yuBQqmyWgyE?usp=sharing)
 
-[![Release](https://img.shields.io/github/v/release/h55n/fumii?style=for-the-badge&color=2563EB)](https://github.com/h55n/fumii/releases/tag/v2.0.0)
-[![Windows](https://img.shields.io/badge/Windows-x64-blue?style=for-the-badge&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe)
-[![Linux](https://img.shields.io/badge/Linux-x64-orange?style=for-the-badge&logo=linux)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-1.0.0-linux-x64.tar.gz)
-[![ESP32-S3](https://img.shields.io/badge/Firmware-ESP32--S3-green?style=for-the-badge&logo=espressif)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+![RELEASE](https://img.shields.io/badge/RELEASE-v2.0.0-2563EB?style=flat-square&labelColor=1a1a2e)
+[![Windows Setup](https://img.shields.io/badge/WINDOWS%20SETUP-.exe-0078D4?style=flat-square&labelColor=222222&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe)
+[![Windows Portable](https://img.shields.io/badge/WINDOWS%20PORTABLE-.zip-555555?style=flat-square&labelColor=222222)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-portable.zip)
+[![ESP32-S3](https://img.shields.io/badge/FIRMWARE-ESP32--S3-E7343F?style=flat-square&labelColor=222222&logo=espressif)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip)
+[![License](https://img.shields.io/badge/LICENSE-MIT-F5A623?style=flat-square&labelColor=222222)](LICENSE)
+![BUILT BY](https://img.shields.io/badge/BUILT%20BY-Team%20fumii-9B59B6?style=flat-square&labelColor=222222)
+
+![TRACK](https://img.shields.io/badge/TRACK-Agentic%20Autonomous%20Systems-2ECC71?style=flat-square&labelColor=333333)
+![HARDWARE](https://img.shields.io/badge/HARDWARE-ESP32--S3%20%2B%20TFT%20%2B%20I2S-F39C12?style=flat-square&labelColor=333333)
+![MEMORY](https://img.shields.io/badge/MEMORY-Local%20SQLite%20%2B%20Provenance-E74C3C?style=flat-square&labelColor=333333)
+
+</div>
+
+**fumii is a palm-sized physical AI companion that lives on your desk.** It has an animated TFT pixel face, listens through an I2S microphone, speaks through a neural voice engine, and remembers your life through a local-first memory graph that never leaves your machine. Unlike transactional smart speakers or screen-locked chatbots, fumii combines tangible hardware presence with deep episodic memory, a multi-provider LLM fallback cascade (Ollama, Groq, NVIDIA NIM, OpenAI, Anthropic, Gemini), local Whisper speech-to-text, and a transparent provenance system that shows you exactly which memories shaped every conversation before you decide to change them.
 
 ---
- 
-### 📹 Demo Video
- 
+
+### 📹 Demo
+
 [![fumii Demo](https://img.youtube.com/vi/OoZZ1LDStHE/maxresdefault.jpg)](https://youtu.be/OoZZ1LDStHE?si=KOBHb7X4dHyW35cv)
- 
-> ▶ *Click the thumbnail above to watch the full demo on YouTube*
- 
-<br/>
 
-### 📁 [**Project Files — Google Drive**](https://drive.google.com/drive/folders/17kJrMC85nZk7DcOUeabH6yuBQqmyWgyE?usp=sharing)
+> ▶ *Click to watch on YouTube*
 
-> *Full project CAD files, 3D enclosures, PCB schematics, firmware bins, and media assets.*
- 
 ---
 
 ### 👥 The Team
 
-| Name | Role | Focus Areas |
-|------|------|-------------|
-| **Mrunmayee Daware** | AI / LLM Integration | Prompt Engineering, Personality Calibration & Emotion Engine |
-| **Hassan Rehman** | Software & System Architecture | Electron Core, Memory Provenance, React Dashboard & State |
-| **Yash Gadhave** | Hardware & Embedded Engineering | PCB Design, Power Management, Component Sourcing & 3D Shell |
-| **Tanishq Mhetras** | Firmware & Connectivity | ESP32-S3 Firmware, I2S Audio Pipelines & MQTT/WS Protocols |
-
-**Track:** Agentic Autonomous Systems
+| Name | Role | Focus |
+|------|------|-------|
+| **Mrunmayee Daware** | AI / LLM Integration | Prompt Engineering, Personality & Emotion Engine |
+| **Hassan Rehman** | Software & System Architecture | Electron Core, Memory Provenance, React Dashboard |
+| **Yash Gadhave** | Hardware & Embedded Engineering | PCB Design, Power, Component Sourcing & 3D Shell |
+| **Tanishq Mhetras** | Firmware & Connectivity | ESP32-S3 Firmware, I2S Audio & MQTT/WS Protocols |
 
 ---
 
-</div>
 
 ## 🏆 Hackathon Challenge: Provenance: Confirmation Step
 

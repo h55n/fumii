@@ -25,9 +25,12 @@
 
 ### 📹 Demo
 
-[![fumii Demo](https://img.youtube.com/vi/OoZZ1LDStHE/maxresdefault.jpg)](https://youtu.be/OoZZ1LDStHE?si=KOBHb7X4dHyW35cv)
+<a href="https://youtu.be/OoZZ1LDStHE?si=KOBHb7X4dHyW35cv">
+  <img src="assets/demo.gif" alt="fumii demo — click to watch on YouTube" width="100%" />
+</a>
 
-> ▶ *Click to watch on YouTube*
+> ▶ *[Watch the full demo on YouTube](https://youtu.be/OoZZ1LDStHE?si=KOBHb7X4dHyW35cv) · GIF is 3× speed preview*
+
 
 ---
 

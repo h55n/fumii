@@ -1,7 +1,7 @@
 {
   "name": "fumii",
   "productName": "fumii",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "fumii — you're never really alone. Desktop companion app (Phase 1: software only).",
   "author": "Hassan Rehman",
   "main": "out/main/main.js",

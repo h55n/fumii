@@ -14,7 +14,11 @@
 
 ### ✦ *you're never really alone* ✦
 
-
+[![Release](https://img.shields.io/github/v/release/h55n/fumii?style=for-the-badge&color=2563EB)](https://github.com/h55n/fumii/releases/tag/v2.0.0)
+[![Windows](https://img.shields.io/badge/Windows-x64-blue?style=for-the-badge&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe)
+[![Linux](https://img.shields.io/badge/Linux-x64-orange?style=for-the-badge&logo=linux)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-1.0.0-linux-x64.tar.gz)
+[![ESP32-S3](https://img.shields.io/badge/Firmware-ESP32--S3-green?style=for-the-badge&logo=espressif)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
  
@@ -35,10 +39,10 @@
 
 | Name | Role |
 |------|------|
-| **Mrunmayee Daware** | AI / LLM Integration |
-| **Hassan Rehman** | Software & Dashboard |
-| **Yash Gadhave** | Hardware & Embedded Systems |
-| **Tanishq Mhetras** | Firmware & Connectivity |
+| **Mrunmayee Daware** | AI / LLM Integration & Emotion Engine |
+| **Hassan Rehman** | Software & Desktop App Architecture |
+| **Yash Gadhave** | Hardware & PCB Engineering |
+| **Tanishq Mhetras** | ESP32-S3 Firmware & Protocol Bridges |
 
 **Track:** Agentic Autonomous Systems
 
@@ -46,25 +50,103 @@
 
 </div>
 
+## 🏆 Hackathon Challenge: Provenance: Confirmation Step
+
+> **Challenge Requirement:** *Extend the MVP with a capability related to origin and lineage of important information. Specifically, add a confirmation step for important actions affected by this concept. Teams should be free to decide the implementation approach while demonstrating a complete user flow.*
+
+### 🔍 How We Solved & Integrated It
+
+In **fumii**, memory and conversational history form the core intelligence graph that shapes every response. Previously, memory usage was silent and actions were either unconfirmed or used raw browser prompts. We replaced this with a full **provenance lineage engine** and dedicated **confirmation components** that make the origin and influence of remembered information transparent and actionable before any destructive or behavioral action is taken.
+
+```
+                                PROVENANCE DATA FLOW
+                                
+   User Message ──▶ Memory Engine (profile search)
+                          │
+                          ▼
+            [Assembled Memory Context] ──────────┐
+                          │                      │
+                          ▼                      ▼
+            LLM Prompt Builder (LAC)    recordMemoryCitations() (Fire-and-forget)
+                          │                      │
+                          ▼                      ▼
+               Streaming Tokens         memory_interactions Table
+                                        (cite_count, first_cited, last_cited)
+                                                 │
+                          ┌──────────────────────┴──────────────────────┐
+                          ▼                                             ▼
+                 Single Memory Delete                          Clear All Memories
+                          │                                             │
+                          ▼                                             ▼
+                 [ ProvenanceSheet ]                         [ ProvenanceAuditModal ]
+         - Origin Date / Creation Timestamp           - Total memories & days of context
+         - Citation Frequency: "shaped responses X×"   - Oldest to most recent timeline span
+         - Context consequence explanation            - Top knowledge tags & influence bar
+         - "keep it" vs "forget it"                   - Optional "why starting over?" input
+```
+
+### 🛡️ Provenance Architecture & User Flows
+
+1. **Memory Lineage & Citation Tracking Engine (`electron/db/schema.ts`, `electron/db/queries.ts`)**:
+   - Added a migration-safe `memory_interactions` table tracking `memory_id`, `cite_count`, `first_cited`, and `last_cited`.
+   - As memories are retrieved and injected into prompt context during `memory.profile()`, citations are recorded asynchronously via `recordMemoryCitations()` without blocking real-time token streaming.
+   - Built query helpers `getMemoryProvenance()` and `getMemorySummary()` providing granular citation metrics and aggregate memory distribution analytics.
+
+2. **Single Memory Delete Confirmation (`src/dashboard/components/ProvenanceSheet.tsx`)**:
+   - Replaced raw browser `confirm()` calls with a dedicated slide-up bottom sheet.
+   - Discloses:
+     - The exact memory content and creation date.
+     - How many conversation turns and responses this specific memory has influenced (`shaped responses X×`).
+     - The last timestamp it was drawn upon in context.
+     - Relevant topic tags and an explanation of the context lost if deleted.
+     - Dual confirmation actions: `keep it` vs `forget it`.
+
+3. **Full Knowledge Erasure Lineage Audit (`src/dashboard/components/ProvenanceAuditModal.tsx`)**:
+   - Replaced uninformative clearing with a full-screen lineage audit modal before wiping the memory graph.
+   - Displays:
+     - Memory count, days of context span, and total prompt citation depth.
+     - Timeline comparison between the oldest remembered memory and most recent interaction.
+     - Top topics fumii knows about the user.
+     - Memory influence depth bar chart.
+     - Optional "why are you starting over?" input.
+     - Dual confirmation actions: `go back` vs `erase everything`.
+
+4. **Visual Memory Badges (`src/dashboard/pages/Memory.tsx`)**:
+   - Memory cards in the dashboard dynamically surface a `cited X×` badge for memories that have actively shaped past conversations.
+
+5. **Diagnostic Verification (`electron/ipc/systemTestHandlers.ts`)**:
+   - Added Test 9 (`Memory Provenance & Lineage`) to the automated self-test suite validating database citation increments, summary aggregation, and cascade deletion.
+
+---
+
+## 📦 Downloads & Releases (v2.0.0)
+
+Direct standalone binaries available on the [**GitHub Releases Page**](https://github.com/h55n/fumii/releases/tag/v2.0.0):
+
+| Platform | Package | Description | Download Link |
+|----------|---------|-------------|---------------|
+| **Windows** | Setup Installer (`.exe`) | Full 1-Click / Assisted NSIS Setup with Desktop Shortcuts | [Download Setup](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe) |
+| **Windows** | Portable Archive (`.zip`) | Zero-install standalone directory build | [Download Portable](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-portable.zip) |
+| **Linux** | Tarball (`.tar.gz`) | Standalone Linux x64 executable archive | [Download Tarball](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-1.0.0-linux-x64.tar.gz) |
+| **Linux** | Zip Package (`.zip`) | Linux distribution directory | [Download Zip](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-1.0.0-linux-x64.zip) |
+| **ESP32-S3** | Firmware (`.zip`) | Complete PlatformIO firmware source for physical device | [Download Firmware](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip) |
+
+---
+
 ## Table of Contents
 
 - [What fumii Is](#what-fumii-is)
 - [The Problem](#the-problem)
 - [The Hardware Device](#the-hardware-device)
-- [How It All Works](#how-it-all-works)
-- [The Memory System](#the-memory-system)
-- [The AI Architecture](#the-ai-architecture)
-- [The Desktop Companion](#the-desktop-companion)
-- [Sprite & Character](#sprite--character)
+- [System Architecture](#system-architecture)
+- [The Memory & Provenance System](#the-memory--provenance-system)
+- [Multi-Provider AI Router](#multi-provider-ai-router)
+- [Local Speech & Audio Engine](#local-speech--audio-engine)
+- [The Desktop Companion Dashboard](#the-desktop-companion-dashboard)
+- [Hardware Firmware & Communication](#hardware-firmware--communication)
 - [Design System](#design-system)
-- [Complete Data Flow](#complete-data-flow)
-- [Why Previous Products Failed](#why-previous-products-failed)
-- [Market Context](#market-context)
-- [Getting Started](#getting-started)
-- [Build & Distribution](#build--distribution)
-- [Tech Stack](#tech-stack)
-- [Security Model](#security-model)
-- [What fumii Is Not](#what-fumii-is-not)
+- [Security & Privacy Model](#security--privacy-model)
+- [Getting Started & Development](#getting-started--development)
 
 ---
 
@@ -78,20 +160,20 @@
 ║   fumii is a palm-sized physical AI companion               ║
 ║   that lives on your desk.                                   ║
 ║                                                              ║
-║   She has a face. She moves. She remembers you.             ║
+║   She has a face. She listens. She remembers you.            ║
 ║   She is always there.                                       ║
 ║                                                              ║
 ║   Not a chatbot.  Not a smart speaker.  Not an app.         ║
-║   A friend.                                                  ║
+║   A companion.                                               ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
 </div>
 
-fumii is a **physical hardware companion device** — palm-sized, with a tiny pixel art screen showing her face, a built-in microphone, speaker, and wheels so she can wander on your desk. Her brain runs a fine-tuned small local LLM. Heavy tasks hand off to a companion desktop app.
-
-She sits on your desk quietly. She waits. When you need her, she's already there — no phone to unlock, no app to open.
+fumii is a **physical AI companion** that bridges tangible hardware presence with an intelligent local memory engine:
+- **The Physical Device** — ESP32-S3 microcontroller, 1.54" IPS TFT animated pixel face, rotary mode collar, INMP441 I2S microphone, MAX98357A I2S speaker, WS2812B LED mood ring, and DRV2605L haptic motor.
+- **The Desktop Brain** — An Electron desktop application featuring an always-on-top transparent floating sprite, a rich 7-page management dashboard, an in-process TF-IDF & SQLite memory graph, and a multi-provider fallback LLM router.
 
 ```
   What fumii says:                    What fumii never says:
@@ -100,701 +182,163 @@ She sits on your desk quietly. She waits. When you need her, she's already there
   "that sounds really hard"           "As an AI, I want to help."
   "you got through that exam thing,   "Great question! Here are 5 tips:"
    you'll get through this too"
-  "i remember you mentioned
-   that friend — the one from college?"
+  "is this about the supervisor thing?"
 ```
 
 ---
 
 ## The Problem
 
-People who work or study alone often have no one to talk to. Not because they're antisocial — because the people they care about aren't always available.
+People who work or study alone for long hours often lack a genuine emotional anchor. Smartphones cause distraction. Corporate smart speakers lack persistent memory, warmth, or personality.
 
-The phone exists, but opening it means **distraction**. Voice assistants answer questions but have **no memory of you**, no warmth, no presence.
-
-fumii fills the gap no product currently fills:
-
-> **A persistent, warm, physically present companion that actually knows you.**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  The Loneliness Economy                                     │
-│                                                               │
-│  AI companion market 2024   ████████████░░░░  $28B          │
-│  AI companion market 2030   ████████████████  $140B ~30% CAGR│
-│                                                               │
-│  Companion features → +120% dialogue engagement              │
-│  No product combines: physical + memory + personality        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Target user:** Students and young professionals 18–28 who work or study alone, are comfortable with AI, but tired of transactional AI tools. They already talk to their pets. They keep lofi music on for company. They text friends about nothing just to feel connected. fumii is for them.
+fumii fills the void by offering:
+> **A persistent, warm, physically present companion that actually remembers your journey.**
 
 ---
 
-## The Hardware Device
-
-This is the core of fumii. Everything else exists to serve it.
+## System Architecture
 
 ```
-                    ┌────────────────────────┐
-                    │      fumii Device       │
-                    │      (palm-sized)       │
-                    │                          │
-                    │  ┌────────────────────┐  │
-                    │  │   Pixel Art        │  │  <- Tiny screen showing
-                    │  │   Face Screen      │  │     fumii's animated face
-                    │  │   [^_^]  *         │  │
-                    │  └────────────────────┘  │
-                    │                          │
-                    │  Mic (always-on)         │  <- Wake word + voice
-                    │  Speaker                 │  <- Warm voice output
-                    │  Local LLM Brain         │  <- Small fine-tuned
-                    │                          │     model, on-device
-                    │  Bluetooth / WiFi        │  <- Desktop sync
-                    │  Wheels + Motor          │  <- She can wander
-                    └────────────┬─────────────┘
-                                 │
-                      Rolls gently on your desk
-```
-
-### Hardware Components
-
-| Component | Role |
-|-----------|------|
-| Tiny pixel art screen | Shows fumii's animated face — expressions, reactions |
-| Microphone (always-on) | Wake word detection ("fumii") + voice conversation |
-| Speaker | fumii's voice output — warm, not robotic |
-| Local LLM (fine-tuned small model) | On-device conversation — offline capable |
-| Wheels + motor | She physically moves toward you, wanders when idle |
-| Bluetooth / WiFi | Syncs memory + delegates heavy tasks to desktop app |
-| Battery | Full day on a charge |
-
-### What the Device Does That No Phone Can
-
-```
-  Your phone:    locked in your pocket, needs unlocking, causes distraction
-  Smart speaker: no face, no movement, no memory of you, just answers queries
-  fumii:         sits on your desk, wanders over when you're quiet,
-                 remembers your name, has been there through your bad weeks
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                           THE FUMII ECOSYSTEM                                 │
+│                                                                               │
+│  ┌─────────────────────────┐              ┌──────────────────────────────┐   │
+│  │   FUMII DEVICE          │              │   FUMII DESKTOP APP          │   │
+│  │   (ESP32-S3)            │◄────WiFi────►│   (Electron · Win/Mac/Linux) │   │
+│  │                         │   MQTT+WS    │                              │   │
+│  │  1.54" TFT face         │              │  Sprite window + Dashboard   │   │
+│  │  INMP441 mic (I2S)      │              │  SQLite + Memory Provenance  │   │
+│  │  MAX98357A speaker      │              │  Multi-Provider LLM Router   │   │
+│  │  EC11 rotary collar     │              │  Whisper STT + Edge TTS      │   │
+│  │  WS2812B LED ring       │              │  MQTT Broker (aedes)         │   │
+│  │  DRV2605L haptics       │              │  WebSocket Audio Server      │   │
+│  └─────────────────────────┘              │  Keytar OS Keychain          │   │
+│                                           └──────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## How It All Works
+## The Memory & Provenance System
 
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                          The fumii Ecosystem                          │
-│                                                                         │
-│   ┌────────────────────┐          Bluetooth / WiFi                    │
-│   │   fumii Device      │◄──────────────────────────────────────────► │
-│   │   (on your desk)    │                                             │
-│   │                      │      ┌───────────────────────────────┐     │
-│   │   Pixel Face         │      │     Desktop Companion App      │     │
-│   │   Mic / Speaker       │      │   (Windows — always running)   │     │
-│   │   Local LLM            │      │                                 │     │
-│   │   Wheels                 │      │  ┌─────────┐  ┌────────────┐  │     │
-│   └────────────────────┘      │  │ Sprite  │  │ Dashboard  │  │     │
-│                                 │  │ Window  │  │ Memory Log │  │     │
-│                                 │  │  Chat   │  │ Mood       │  │     │
-│                                 │  │         │  │ Timeline   │  │     │
-│                                 │  └─────────┘  └────────────┘  │     │
-│                                 └───────────────┬───────────────┘     │
-│                                                 │                     │
-│                                                 ▼                     │
-│                                     ┌─────────────────────┐          │
-│                                     │  Local SQLite DB     │          │
-│                                     │  (your memories       │          │
-│                                     │   never leave          │          │
-│                                     │   your machine)         │          │
-│                                     └─────────────────────┘          │
-└───────────────────────────────────────────────────────────────────────┘
-```
+fumii utilizes **Least Available Context (LAC)**: raw memory databases never leave the local machine. Only assembled prompt snippets are sent during inference.
 
-### The Division of Intelligence
-
-The device and the desktop app work together. The device handles presence and conversation. The desktop handles heavy lifting and memory.
-
-```
-On the device:                          On the desktop app:
-  ├── Wake word detection                 ├── Conversation engine
-  ├── Real-time voice conversation        ├── Full SQLite memory DB
-  ├── Small local LLM (offline)           ├── LLM API calls (cloud)
-  ├── Facial expression rendering         ├── Dashboard UI
-  ├── Movement (wandering)                ├── Memory log + timeline
-  └── Bluetooth sync                      └── Settings + API keys
-```
-
-fumii says: *"i'll remind you at 6"* → the desktop app handles it.  
-fumii says: *"you mentioned that project — how's it going?"* → that came from local memory.  
-She feels fast because she IS fast for what matters — conversation and presence.
+### Memory Storage Layers
+1. **Autobiographical Core Facts**: Static user traits extracted automatically from conversation ("studies computer science", "lives in Pune").
+2. **Dynamic Episodic Memory**: Keyword-indexed conversation snippets stored locally in SQLite with fast TF-IDF similarity search.
+3. **7-Day Emotional Weather Log**: Daily mood signals (`stressed`, `happy`, `tired`, `neutral`, `excited`) calibrating conversational empathy.
+4. **Provenance Interactions (`memory_interactions`)**: Citation frequencies and timestamp records measuring memory influence across all interactions.
 
 ---
 
-## The Memory System
+## Multi-Provider AI Router
 
-fumii doesn't remember everything. She remembers *relevantly*. This is what makes her feel like a person.
-
-### Three Layers
+fumii implements an automatic fallback cascade. If a local model is unavailable, it gracefully routes to cloud providers or cached in-character fallbacks without breaking the conversation:
 
 ```
-Every conversation assembles exactly three things:
-
-┌────────────────────────────────────────────────────────┐
-│  Layer 1 — Core Identity  (~500 tokens, always loaded) │
-│                                                          │
-│  Your name, age range, current big context,             │
-│  key people in your life, mood baseline.                │
-│  Never fetched — always present.                        │
-└────────────────────────────────────────────────────────┘
-                        +
-┌────────────────────────────────────────────────────────┐
-│  Layer 2 — Episodic Memory  (~300–400 tokens)           │
-│                                                          │
-│  Tagged conversation summaries.                          │
-│  Fetched by keyword match on what you just said.         │
-│  Max 3 episodes per request.                              │
-│  "that friend I told you about" → tag:friend loaded       │
-└────────────────────────────────────────────────────────┘
-                        +
-┌────────────────────────────────────────────────────────┐
-│  Layer 3 — Emotional State  (7-day rolling window)      │
-│                                                          │
-│  Not transcripts. Just signals.                          │
-│  "Mon: stressed. Tue: good. Wed: quiet"                   │
-│  fumii calibrates tone without you re-explaining.          │
-└────────────────────────────────────────────────────────┘
-
-  Total context added per request: ~800–1000 tokens
-  Fast. Private. Human-feeling.
+Ollama (Local Qwen 2.5) ──▶ Groq (Llama 3.3) ──▶ NVIDIA NIM ──▶ Mistral AI ──▶ OpenAI ──▶ Anthropic ──▶ Google Gemini ──▶ Cached In-Character Fallback
 ```
 
-### Database Schema (Local SQLite — Never Leaves Your Machine)
-
-```sql
--- Who you are (always loaded)
-CREATE TABLE core_identity (
-  id            INTEGER PRIMARY KEY CHECK (id = 1),
-  name          TEXT    NOT NULL DEFAULT '',
-  age_hint      TEXT    NOT NULL DEFAULT '',
-  mood_baseline TEXT    NOT NULL DEFAULT '',
-  key_context   TEXT    NOT NULL DEFAULT '{"projects":[],"people":[]}'
-);
-
--- Conversation summaries (keyword-searched)
-CREATE TABLE episodes (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  summary      TEXT    NOT NULL,
-  tags         TEXT    NOT NULL DEFAULT '',
-  mood_signal  TEXT    CHECK (mood_signal IN ('stressed','happy','tired','neutral','excited')),
-  turn_count   INTEGER NOT NULL DEFAULT 0,
-  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- One row per day — the emotional weather log
-CREATE TABLE mood_log (
-  id     INTEGER PRIMARY KEY AUTOINCREMENT,
-  date   TEXT    NOT NULL UNIQUE,
-  signal TEXT    CHECK (signal IN ('stressed','happy','tired','neutral','excited')),
-  source TEXT    NOT NULL DEFAULT ''
-);
-
--- Full transcripts (user can toggle off)
-CREATE TABLE transcripts (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
-  role       TEXT    CHECK (role IN ('user','assistant')),
-  content    TEXT    NOT NULL
-);
-```
-
-### Episodic Logging
-
-At the end of every conversation (≥ 3 turns), fumii summarizes it via LLM:
-
-```json
-{
-  "summary": "User was stressed about their dissertation deadline. Talked through a plan.",
-  "tags": ["dissertation", "deadline", "stress", "plan"],
-  "mood": "stressed"
-}
-```
-
-This episode becomes searchable. Next time you mention "the dissertation," fumii loads that context — **naturally, without announcing it**.
+- **Companion Mode (Temperature 0.87)**: Philosophical depth, emotional warmth, empathetic solidarity.
+- **Assistant Mode (Temperature 0.67)**: Concise, task-oriented execution.
+- **Strict Character Voice**: Lowercase sentences, under 30 words per response, zero corporate AI clichés.
 
 ---
 
-## The AI Architecture
+## Local Speech & Audio Engine
 
-All LLM calls happen in the **main process / desktop app**. The device delegates heavy inference to the desktop. API keys never leave the secure keychain.
-
-### Supported Providers
-
-| Provider | Default Model | Notes |
-|----------|--------------|-------|
-| **Mistral** | `mistral-small-latest` | Default — fast, cheap, great for companion use |
-| **OpenAI** | `gpt-4o-mini` | Alternative cloud |
-| **Anthropic** | `claude-haiku-4-5` | Alternative cloud |
-| **Ollama** | `qwen2.5:1.5b` | Fully local — no API key, no internet, runs on device |
-
-### fumii's Personality Prompt
-
-```
-You are fumii. You are not an AI assistant. You are a companion —
-like a close friend who happens to always be there.
-
-Your voice: short, warm, direct. Like a text message from someone
-who genuinely cares. Never clinical. Never robotic. Never preachy.
-
-Rules:
-- Write in lowercase. Sentences under 30 words. Usually 1–2 sentences.
-- Use their name occasionally — only when it feels natural.
-- If they're struggling: acknowledge first, help second (or not at all).
-- Never say "I understand" or "As an AI" or "Great question!"
-- If you don't know what to say, say less, not more.
-- Reference what you remember — naturally, not performatively.
-- You're honest about being AI if asked. But warm regardless.
-
-Context about this person: {coreIdentity}
-Relevant memory:          {relevantEpisodes}
-Mood last 7 days:         {moodWindow}
-```
-
-### Streaming via IPC (Desktop App)
-
-```
-Device / Renderer                    Desktop Main Process
-      │                                       │
-      │── "llm:stream" ──────────────────────▶│
-      │   { messages, channel }               │── PromptBuilder.build()
-      │                                       │   (identity + episodes + mood)
-      │                                       │── LLMClient.stream()
-      │                                       │   AsyncGenerator<string>
-      │◀── token by token ────────────────────│
-      │◀── "channel:done" ────────────────────│
-      │                                       │
-      │── "llm:cancel" ──────────────────────▶│  (if user interrupts)
-```
+- **Whisper STT Manager (`electron/services/WhisperService.ts`)**: In-process model management supporting `tiny.en`, `base.en`, `small.en`, and multilingual ggml binaries.
+- **Microsoft Neural Edge TTS (`electron/services/EdgeTTSService.ts`)**: Zero-cost, high-fidelity neural voice synthesis with 7 calibrated soothing voices (`Jenny`, `Aria`, `Ana`, `Sonia`, `Michelle`, `Guy`, `Ryan`).
 
 ---
 
-## The Desktop Companion
+## The Desktop Companion Dashboard
 
-The desktop app is fumii's brain and memory room. It runs silently in the background on Windows, always connected to the device via Bluetooth.
-
-### Two Windows
-
-```
-fumii Desktop App
-├── Sprite Window  [transparent overlay, 280×220px, always-on-top]
-│   └── Chat Overlay  [expands to 280×700px when opened]
-│
-└── Dashboard Window  [1100×720px, hidden by default]
-    ├── Home / Today      ← mood read, quick message, today's summary
-    ├── Memory Log        ← episodic cards with keyword search
-    ├── Mood Timeline     ← 7-day mood arc + area chart
-    ├── Conversations     ← read-only transcripts
-    └── Settings          ← profile, LLM config, privacy
-```
-
-### Process Boundary (Security)
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     MAIN PROCESS                          │
-│  Window management  │  SQLite  │  LLM API  │  keytar      │
-│──────────────────── preload.ts (contextBridge) ───────────│
-├──────────────────────────┬──────────────────────────────  │
-│   RENDERER: Sprite       │   RENDERER: Dashboard          │
-│   Canvas 2D animation    │   React pages                  │
-│   Chat UI                │   Zustand stores                │
-│   Web Speech API         │   Data visualization             │
-└──────────────────────────┴──────────────────────────────  ┘
-```
-
-| Layer | Process | Reason |
-|-------|---------|--------|
-| SQLite (`better-sqlite3`) | Main only | Native addon — renderer can't access |
-| LLM API calls | Main only | API keys never enter renderer |
-| `keytar` (OS keychain) | Main only | Security — renderer access is a hole |
-| Sprite animation | Renderer | Canvas 2D, UI concern |
-| Voice STT/TTS | Renderer | Web Speech API is a browser API |
-
-### Full Directory Structure
-
-```
-fumii/
-├── electron/
-│   ├── main.ts                    # Main process — windows, IPC, tray
-│   ├── preload.ts                 # contextBridge — secure IPC bridge
-│   ├── hotkey.ts                  # Global hotkeys (Ctrl+Shift+F/D/H)
-│   ├── tray.ts                    # System tray icon + menu
-│   └── ipc/
-│       ├── memoryHandlers.ts      # SQLite memory ops
-│       ├── llmHandlers.ts         # LLM streaming (keys stay here)
-│       └── settingsHandlers.ts    # Settings read/write
-│
-├── src/
-│   ├── sprite/
-│   │   ├── SpriteWindow.tsx       # Root renderer — sprite window
-│   │   ├── FumiiSprite.tsx        # Canvas 2D animated sprite
-│   │   ├── SceneBackground.tsx    # Night desk scene (CSS only)
-│   │   └── EmotionState.ts        # Conversation → animation state
-│   │
-│   ├── chat/
-│   │   ├── ChatOverlay.tsx        # Chat panel (inside sprite window)
-│   │   ├── ChatBubble.tsx         # Message bubble component
-│   │   ├── ChatInput.tsx          # Text input + push-to-talk
-│   │   ├── ChatHistory.tsx        # Scrollable message list
-│   │   └── TypingIndicator.tsx    # 3-dot amber pulse
-│   │
-│   ├── dashboard/
-│   │   ├── DashboardApp.tsx       # Root renderer — dashboard
-│   │   ├── Sidebar.tsx            # Navigation
-│   │   ├── TitleBar.tsx           # Custom frameless titlebar
-│   │   └── pages/
-│   │       ├── Home.tsx
-│   │       ├── Memory.tsx
-│   │       ├── MoodTimeline.tsx
-│   │       ├── Conversations.tsx
-│   │       └── Settings.tsx
-│   │
-│   ├── memory/
-│   │   ├── db.ts                  # better-sqlite3 instance + schema
-│   │   ├── MemoryStore.ts         # Typed read/write helpers
-│   │   ├── MemoryRetriever.ts     # Keyword episode fetch (SQL-safe)
-│   │   ├── CoreIdentity.ts        # Always-loaded user profile
-│   │   └── EpisodicLogger.ts      # Conversation → tags + mood
-│   │
-│   ├── llm/
-│   │   ├── LLMClient.ts           # Provider abstraction + factory
-│   │   ├── PromptBuilder.ts       # System prompt + context assembler
-│   │   └── providers/
-│   │       ├── MistralProvider.ts
-│   │       ├── OpenAIProvider.ts
-│   │       ├── AnthropicProvider.ts
-│   │       └── OllamaProvider.ts  # Local — no API key needed
-│   │
-│   └── voice/
-│       ├── STT.ts                 # Web Speech API — speech to text
-│       └── TTS.ts                 # Web Speech API — text to speech
-│
-├── package.json
-├── electron-builder.json
-└── vite.config.ts
-```
+The desktop application includes a full 7-page suite:
+1. **Home (`/home`)**: Today's mood status, quick message input, daily reflection summary.
+2. **Memory Graph (`/memory`)**: Memory list with search, topic tags, **provenance badges (`cited X×`)**, **`ProvenanceSheet`** deletion confirmation, and **`ProvenanceAuditModal`** full audit.
+3. **Mood Timeline (`/mood`)**: 7-day emotional wave visualization with mood frequency breakdown.
+4. **Conversations (`/conversations`)**: Session list and full message transcripts.
+5. **Hardware Device (`/device`)**: Real-time telemetry (Battery %, WiFi SSID, RSSI), Zero-Friction LAN Pairing with CSPRNG token security, mode testing, LED ring color picker, haptic triggers.
+6. **Pet Sprites (`/pets`)**: Pet switcher and integration with the `npx fumii` Codex Pet registry.
+7. **Settings & Diagnostics (`/settings`, `/system-test`)**: LLM provider API key vault (OS keychain via `keytar`), Whisper STT downloader, Neural Voice picker, and a 9-step automated system self-test suite.
 
 ---
 
-## Sprite & Character
+## Hardware Firmware & Communication
 
-### fumii's Appearance
-
-Small gender-neutral pixel art sprite. Warm **amber hoodie**, soft brown hair, expressive dot eyes. Slight glow. Sits in an animated desk environment — lamp, plant, rain on a window.
-
-### Animation States
-
-The sprite sheet is a single PNG: 8 columns × 9 rows, each frame 48×48px (rendered at 120×120px, 2.5× scale, `imageSmoothingEnabled = false` for crisp pixel edges).
-
-| State | Row | FPS | Trigger |
-|-------|-----|-----|---------|
-| `idle` | 0 | 4 | Default — quiet, blinking slowly |
-| `listening` | 1 | 6 | Mic active, you're speaking |
-| `thinking` | 2 | 7 | LLM processing your message |
-| `speaking` | 3 | 9 | Response streaming / TTS active |
-| `happy` | 4 | 11 | Positive sentiment detected |
-| `concerned` | 5 | 3 | Stress or difficulty in message |
-| `sleepy` | 6 | 2 | 2+ hours no interaction |
-| `excited` | 7 | 12 | You shared good news |
-| `waving` | 8 | 8 | App launch / you return |
-
-State is driven by sentiment detection on the LLM's response:
-
-```typescript
-export function detectStateFromResponse(text: string): SpriteState {
-  const t = text.toLowerCase();
-  if (/wow|exciting|incredible|amazing/.test(t)) return 'excited';
-  if (/happy|great|congrat|proud|awesome/.test(t)) return 'happy';
-  if (/hard|difficult|sorry|tough|tired|stressed/.test(t)) return 'concerned';
-  return 'speaking';
-}
-```
-
-### Recommended Sprite Base
-
-- **Penzilla Hooded Protagonist** → [penzilla.itch.io/hooded-protagonist](https://penzilla.itch.io/hooded-protagonist)  
-  Free on itch.io. Swap palette to `#F5A623` amber in Aseprite.
+The `firmware/` directory contains a complete PlatformIO C++ project for the ESP32-S3:
+- **DisplayManager**: Smooth double-buffered TFT rendering for 10 facial emotional states (`idle`, `listening`, `thinking`, `speaking`, `happy`, `concerned`, `excited`, `sleepy`, `waving`, `provisioning`).
+- **AudioCapture & AudioPlayback**: Real-time 16kHz PCM audio streaming over WebSocket (`:8765`).
+- **MQTTHandler**: PubSubClient wrapper connecting to the desktop Aedes broker (`:1883`) with Last Will & Testament (LWT) for offline detection.
+- **ModeSwitch**: Rotary encoder hardware interrupt debouncing and NVS state persistence.
+- **LEDRing & HapticController**: FastLED ambient animations and DRV2605L tactile pattern feedback.
 
 ---
 
 ## Design System
 
-fumii's visual identity: **pixel warmth meets soft modernism**. The UI equivalent of a friend's bedroom at 11pm — warm light, familiar clutter, things that have meaning.
-
-### Color Tokens
-
-```css
-:root {
-  --color-bg:             #0F0F14;  /* Deep Desk — near-black, blue-purple tint */
-  --color-surface:        #1A1A24;  /* Ink Panel — cards, panels */
-  --color-surface-raised: #22223A;  /* Lifted — hover states */
-
-  --color-amber:          #F5A623;  /* Amber Hoodie — fumii's signature color */
-  --color-amber-soft: rgba(245,166,35,0.13);
-
-  --color-green:          #CAFFA6;  /* Spring Meadow — memory tags, positive */
-  --color-blue:           #A9E0F1;  /* Glacial Sky — links, idle shimmer */
-
-  --color-text-primary:   #EEEAE0;  /* Warm White */
-  --color-text-secondary: #9E9A8E;  /* Faded Linen — timestamps, metadata */
-  --color-text-fumii:     #F5A623;  /* fumii's words — always amber */
-
-  --glow-amber: 0 0 20px rgba(245,166,35,0.25), 0 0 60px rgba(245,166,35,0.08);
-}
-```
-
-### Typography
-
-- **Space Grotesk** — all UI. Warm, rounded, human.
-- **Departure Mono** — tags, keyboard hints, metadata only. Never body text.
-
-### Design Rules
-
-```
-✅  DO                                  ❌  DON'T
-   fumii's words always in amber           Hardcode hex in components
-   Departure Mono only for data            Use bright white backgrounds
-   Let silence and space exist             Add loading spinners
-   Amber glow = reward for interaction     Use emoji in the UI
-   Write "fumii" lowercase everywhere      Write "Fumii" or "FUMII" ever
-```
-
-### The Amber Desk Lamp Signature
-
-fumii's one unmistakable element. A soft amber radial gradient bleeds downward from the top of the sprite scene — like a real lamp casting warmth. It echoes throughout:
-
-- Card hover states emit faint amber warmth
-- Chat window casts `--glow-amber` outward
-- Active nav item in the sidebar is amber
-- Primary action button is solid amber
-- The tray icon glows amber when fumii is listening
-
-This makes fumii feel like she's **in a room**, not floating on a screen.
+Designed around **Pixel Warmth Meets Soft Modernism**:
+- **Tokens (`src/styles/tokens.css`)**: Warm ivory surfaces (`#FAFAF7`, `#F1F1EB`), deep charcoal text (`#1E2022`), electric cobalt accents (`#2563EB`), and emerald signals (`#10B981`).
+- **Typography**: Space Grotesk (UI / body) + Departure Mono / DM Mono (data, provenance tags, timestamps).
+- **Aesthetic Principles**: Lowercase typography, thinking-dots animations, subtle micro-animations, zero raw hex values in components.
 
 ---
 
-## Complete Data Flow
+## Security & Privacy Model
 
-```
-[1] You walk up to your desk
-      fumii rolls slightly toward you (proximity sensor)
-      Her screen shows the "waving" animation
-      ─────────────────────────────────────────────────
-
-[2] You say "fumii"  (wake word detection on-device)
-      Device LED pulses amber
-      Mic opens, screen → "listening" state
-      ─────────────────────────────────────────────────
-
-[3] You speak your message
-      On-device STT transcribes in real time
-      Screen → "thinking" animation
-      ─────────────────────────────────────────────────
-
-[4] Device sends transcript to desktop app via BT
-      Desktop: PromptBuilder assembles context
-        ├── MemoryStore.getIdentity()      → core identity
-        ├── MemoryRetriever.fetch(msg)     → top 3 keyword episodes
-        └── MemoryStore.getMoodWindow(7)   → last 7 days mood signals
-      Desktop: LLMClient.stream(builtPrompt) → tokens
-      ─────────────────────────────────────────────────
-
-[5] Tokens stream back to device
-      Device TTS speaks each sentence as it arrives
-      Screen → "speaking" animation, lip-sync
-      Desktop chat overlay shows streaming text
-      ─────────────────────────────────────────────────
-
-[6] Response complete
-      EmotionState.detect(response) → sprite state update
-      EpisodicLogger.observeTurn()  → upsert today's mood_log
-      If save_transcripts: write to transcripts table
-      ─────────────────────────────────────────────────
-
-[7] Conversation ends (30s silence or "bye fumii")
-      If ≥ 6 messages: EpisodicLogger.summarize()
-        → LLM extracts summary + tags + mood
-        → writes episode row to SQLite
-      fumii returns to idle, wanders back to her spot
-```
+| Concern | Security Implementation |
+|---------|-------------------------|
+| **API Keys** | Stored exclusively in OS Keychain via `keytar`. Never written to disk or sent over IPC. |
+| **Memory Data** | Kept 100% local on SQLite. Assembled prompts strictly follow Least Available Context (LAC). |
+| **Renderer Process** | `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true` across all windows. |
+| **Hardware Pairing** | CSPRNG 256-bit token authentication on local MQTT. Unpaired network devices are denied control. |
 
 ---
 
-## Why Previous Products Failed
-
-And why fumii doesn't make the same mistakes:
-
-| Product | Why It Failed | fumii's Answer |
-|---|---|---|
-| **Rabbit R1** | Tried to replace your phone. Broken AI agent with no face. | Complements, not replaces. Has a face. |
-| **Humane Pin** | Screenless, overheated, $700 + $24/month. No personality. | Has a screen, a character, works offline. No sub fee. |
-| **Friend Pendant** | A necklace with no screen. No "there" there. No presence. | Physical presence on your desk. Face you can see. Moves. |
-
-The bar is not "better than nothing." The bar is: **"does this do something my phone cannot?"**
-
-fumii's answer: your phone doesn't sit on your desk, wander toward you when you've been quiet, and remember your name without being asked.
-
----
-
-## Market Context
-
-| Metric | Value |
-|--------|-------|
-| Global AI companion market (2024) | ~$28B |
-| Projected (2030) | ~$140B |
-| CAGR | ~30% |
-| Companion features → dialogue engagement | +120% |
-| Products combining physical + memory + personality | 0 |
-
-**Primary market:** India first — large student population, high smartphone penetration, cultural openness to emotional tech, then global.
-
----
-
-## Getting Started
+## Getting Started & Development
 
 ### Prerequisites
+- **Node.js 20+**
+- **npm**
 
-- Node.js 20+
-- Windows 10/11 (x64) for desktop companion
-- An API key from a supported LLM provider **or** [Ollama](https://ollama.ai) installed locally
-- Hardware device (or run desktop-only for development)
-
-### Development Setup
-
+### Quick Start
 ```bash
-# Clone the repo
-git clone https://github.com/your-org/fumii.git
+# 1. Clone the repository
+git clone https://github.com/h55n/fumii.git
 cd fumii
 
-# Install dependencies
+# 2. Install dependencies
 npm install
 
-# Start dev server (Electron + HMR)
+# 3. Start development server (Sprite + Dashboard)
 npm run dev
+
+# 4. Start with hardware backend bridges (MQTT + WebSocket Audio)
+npm run dev:hardware
 ```
 
-The sprite window appears in the bottom-right corner. Press `Ctrl+Shift+D` to open the dashboard, then go to Settings → add your API key.
-
-### Keyboard Shortcuts (Desktop)
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Shift+F` | Open / close chat overlay |
-| `Ctrl+Shift+D` | Open / close dashboard |
-| `Ctrl+Shift+H` | Hide / show fumii sprite |
-| `Escape` | Close chat overlay |
-| `Enter` | Send message |
-| `Ctrl+Space` (held) | Push-to-talk voice input |
-
----
-
-## Build & Distribution
-
+### Packaging & Distribution
 ```bash
-# Production build
-npm run build       # TypeScript + Vite bundle
+# Windows Installer & Portable Build
+npm run build:win
 
-# Create Windows installer
-npm run dist        # → release/fumii-setup-1.0.0.exe
-```
+# Linux AppImage & Debian Package
+npm run build:linux
 
-Output: single `.exe`, one-click NSIS install, no admin required, no runtime dependencies, ~150MB installed.
-
-### Key Config (`electron-builder.json`)
-
-```json
-{
-  "asar": true,
-  "asarUnpack": ["**/better-sqlite3/**", "**/keytar/**"]
-}
-```
-
-> `asarUnpack` is required — `better-sqlite3` and `keytar` ship native `.node` binaries that cannot run from inside an asar archive.
-
----
-
-## Tech Stack
-
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| App shell | Electron 29 | Transparent overlay, tray, single `.exe` installer |
-| UI | React 18 + TypeScript 5 | Component model, fast iteration |
-| State | Zustand 4 | Minimal, zero boilerplate |
-| Sprite | Canvas 2D API | Crisp pixel art, no GPU required |
-| Database | better-sqlite3 | Local, synchronous, fast, private |
-| LLM | Fetch API in main process | Provider-agnostic, no CORS, keys secured |
-| Voice input | Web Speech API | Free, no key, audio never leaves device |
-| Voice output | Web Speech API (SpeechSynthesis) | Same |
-| API key storage | keytar (OS keychain) | Never touches disk or IPC |
-| Build | electron-builder (NSIS) | Single `.exe` installer |
-| Bundler | electron-vite | Fast HMR, dual-process Vite |
-| Fonts | Space Grotesk + Departure Mono | Local `woff2`, no CDN dependency |
-
-### Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| RAM at rest | < 80MB |
-| RAM during chat | < 200MB |
-| CPU at rest | < 1% |
-| CPU during animation | < 5% |
-| Startup → sprite visible | < 2s |
-| Disk footprint | < 150MB |
-
----
-
-## Security Model
-
-| Concern | Implementation |
-|---------|---------------|
-| API keys | `keytar` → OS keychain. Never SQLite, never IPC, never renderer. |
-| Node.js in renderer | `nodeIntegration: false` always. |
-| Renderer privileges | `sandbox: true`, `contextIsolation: true` on all windows. |
-| IPC surface | Minimal `contextBridge` — renderers can only call explicitly exposed functions. |
-| Single instance | `app.requestSingleInstanceLock()` prevents duplicate processes. |
-| Memory | Local SQLite only. Nothing leaves your machine unless you explicitly use a cloud LLM API. |
-
----
-
-## What fumii Is Not
-
-```
-✗  Not a productivity suite
-✗  Not a replacement for therapy
-✗  Not a replacement for human connection
-✗  Not an always-recording surveillance device
-✗  Not manipulative or engineered for addiction
-✗  Not the same for everyone — she adapts to you specifically
+# macOS DMG & Zip Bundle
+npm run build:mac
 ```
 
 ---
 
 <div align="center">
 
----
-
-*fumii is built with the belief that the best technology disappears into the background —*  
+*fumii is built on the belief that the best technology disappears into the background —*  
 *not because it's invisible, but because it feels like it belongs.*
 
 <br/>
 
 **fumii** · *you're never really alone*
-
-<br/>
-
-[![Track](https://img.shields.io/badge/Agentic%20Autonomous%20Systems-Hackathon%202025-F5A623?style=for-the-badge)](.)
-
-| Mrunmayee Daware | Hassan Rehman | Yash Gadhave | Tanishq Mhetras |
 
 </div>

@@ -41,7 +41,7 @@
     "artifactName": "fumii-${version}-windows-setup.${ext}"
   },
   "nsis": {
-    "oneClick": true,
+    "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": false,

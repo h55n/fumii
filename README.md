@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.jpg" alt="fumii" width="100%" />
+<img src="assets/banner.jpg" alt="fumii" width="60%" />
 
 # fumii 🤖
 

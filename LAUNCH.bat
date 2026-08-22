@@ -1,38 +1,30 @@
 @echo off
-title fumii — Setup and Launch
+title fumii — Desktop Companion
 echo.
-echo  +======================================+
-echo  |  fumii -- Install and Launch         |
-echo  +======================================+
+echo  ========================================
+echo     fumii -- Desktop Companion
+echo  ========================================
 echo.
 
-cd /d "f:\ANTIGRAVITY\fumii"
-if errorlevel 1 (
-    echo ERROR: Could not navigate to f:\ANTIGRAVITY\fumii
-    pause
-    exit /b 1
-)
+cd /d "%~dp0"
 
-echo [1/2] Installing dependencies (marked, dompurify, and all others)...
-echo       (this may take 2-5 min for native addons)
-echo.
-npm install
-if errorlevel 1 (
-    echo.
-    echo ERROR: npm install failed.
-    echo If you see node-gyp errors, ensure Visual Studio Build Tools are installed.
-    echo   winget install Microsoft.VisualStudio.2022.BuildTools
-    pause
-    exit /b 1
-)
-
-echo.
-echo [1.5/2] Cleaning up old processes...
-taskkill /F /IM electron.exe /T >nul 2>&1
+echo [1/4] Stopping previous fumii instances...
 taskkill /F /IM fumii.exe /T >nul 2>&1
+powershell -Command "Get-Process -Name 'fumii','electron' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+ping 127.0.0.1 -n 3 >nul
 
-echo.
-echo [2/2] Starting fumii...
-echo.
-npm run dev
-pause
+echo [2/4] Cleaning lock files...
+powershell -Command "Remove-Item -Path \"$env:APPDATA\fumii\Singleton*\",\"$env:APPDATA\fumii\lockfile\",\"$env:APPDATA\fumii\DevToolsActivePort\" -Force -ErrorAction SilentlyContinue" >nul 2>&1
+
+echo [3/4] Launching fumii...
+if exist "release-fixed\win-unpacked\fumii.exe" (
+    start "" "release-fixed\win-unpacked\fumii.exe"
+    echo OK: fumii is open!
+) else if exist "release\win-unpacked\fumii.exe" (
+    start "" "release\win-unpacked\fumii.exe"
+    echo OK: fumii is open!
+) else (
+    npm run dev
+)
+
+ping 127.0.0.1 -n 2 >nul

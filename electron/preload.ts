@@ -1,126 +1,147 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron';
 
-// ── IPC Bridge ─────────────────────────────────────────────────────────────
-// The ONLY way renderers communicate with the main process.
-// contextIsolation = true ensures this is the sole bridge.
+type Message = { role: 'user' | 'assistant' | 'system'; content: string };
 
-contextBridge.exposeInMainWorld('fumiiAPI', {
-  // Sprite window controls
-  sprite: {
-    setMouseEvents: (enabled: boolean) =>
-      ipcRenderer.send('sprite:set-mouse-events', enabled),
-    toggleChat: (open: boolean) =>
-      ipcRenderer.send('chat:toggle', open),
-    sleep: () => ipcRenderer.send('sprite:sleep'),
-    wake:  () => ipcRenderer.send('sprite:wake')
-  },
+const streamMessage = (
+  messages: Message[],
+  onToken: (token: string) => void,
+  onDone: (full: string) => void,
+  onError: (err: string) => void
+) => {
+  const streamId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  // Dashboard
-  dashboard: {
-    open: () => ipcRenderer.send('dashboard:open')
-  },
+  const tokenHandler = (_: unknown, id: string, token: string) => {
+    if (id === streamId) onToken(token);
+  };
+  const doneHandler = (_: unknown, id: string, full: string) => {
+    if (id === streamId) {
+      cleanup();
+      onDone(full);
+    }
+  };
+  const errorHandler = (_: unknown, id: string, err: string) => {
+    if (id === streamId) {
+      cleanup();
+      onError(err);
+    }
+  };
+  const cleanup = () => {
+    ipcRenderer.removeListener('llm:token', tokenHandler);
+    ipcRenderer.removeListener('llm:done', doneHandler);
+    ipcRenderer.removeListener('llm:error', errorHandler);
+  };
 
-  // Frameless window controls (dashboard titlebar)
-  window: {
-    minimize: () => ipcRenderer.send('window:minimize'),
-    maximize: () => ipcRenderer.send('window:maximize'),
-    close:    () => ipcRenderer.send('window:close')
-  },
+  ipcRenderer.on('llm:token', tokenHandler);
+  ipcRenderer.on('llm:done', doneHandler);
+  ipcRenderer.on('llm:error', errorHandler);
+  ipcRenderer.send('llm:stream', streamId, messages);
 
-  // Memory — all DB operations are main-process only
-  memory: {
-    getCoreIdentity:  ()              => ipcRenderer.invoke('memory:get-core-identity'),
-    setCoreIdentity:  (data: unknown) => ipcRenderer.invoke('memory:set-core-identity', data),
-    getEpisodes:      (limit?: number) => ipcRenderer.invoke('memory:get-episodes', limit),
-    searchEpisodes:   (q: string)     => ipcRenderer.invoke('memory:search-episodes', q),
-    getMoodLog:       (days?: number) => ipcRenderer.invoke('memory:get-mood-log', days),
-    clearAll:         ()              => ipcRenderer.invoke('memory:clear-all'),
-    getTranscripts:   (id: number)    => ipcRenderer.invoke('memory:get-transcripts', id),
-    observeTurn:      (date: string, signal: string, source: string) =>
-                        ipcRenderer.invoke('memory:observe-turn', date, signal, source),
-    saveEpisode:      (summary: string, tags: string, mood: string, turns: number) =>
-                        ipcRenderer.invoke('memory:save-episode', summary, tags, mood, turns)
-  },
+  return () => {
+    cleanup();
+    ipcRenderer.send('llm:cancel', streamId);
+  };
+};
 
-  // LLM — API keys never touch the renderer
-  llm: {
-    sendMessage: (
-      messages: Array<{ role: string; content: string }>,
-      config: Record<string, unknown>
-    ) => ipcRenderer.invoke('llm:send-message', messages, config),
+const api = {
+  // LLM
+  streamMessage,
 
-    streamMessage: (
-      messages: Array<{ role: string; content: string }>,
-      config: Record<string, unknown>,
-      onChunk: (chunk: string | null) => void
-    ): Promise<string> => {
-      const channel = `llm:stream:${Date.now()}:${Math.random().toString(36).slice(2)}`
-      ipcRenderer.on(channel, (_e, chunk: string | null) => onChunk(chunk))
-      return ipcRenderer
-        .invoke('llm:stream-message', messages, config, channel)
-        .finally(() => ipcRenderer.removeAllListeners(channel))
-    },
+  // Memory
+  getProfile: () => ipcRenderer.invoke('memory:getProfile'),
+  searchMemories: (query: string) => ipcRenderer.invoke('memory:search', query),
+  deleteMemory: (id: string) => ipcRenderer.invoke('memory:delete', id),
+  clearAllMemories: () => ipcRenderer.invoke('memory:clearAll'),
+  // Provenance — fetches origin/lineage data before confirming destructive actions
+  getMemoryProvenance: (id: string) => ipcRenderer.invoke('memory:getProvenance', id),
+  getMemorySummary: () => ipcRenderer.invoke('memory:getSummary'),
 
-    getProviders: () => ipcRenderer.invoke('llm:get-providers')
-  },
+  // Mood
+  getMoodLog: (days: number) => ipcRenderer.invoke('mood:getLog', days),
+  getTodayMood: () => ipcRenderer.invoke('mood:getToday'),
+
+  // Sessions + transcripts
+  getSessions: (limit: number) => ipcRenderer.invoke('sessions:list', limit),
+  getTranscripts: (sessionId: number) => ipcRenderer.invoke('sessions:transcripts', sessionId),
 
   // Settings
-  settings: {
-    get:       (key: string)                => ipcRenderer.invoke('settings:get', key),
-    set:       (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
-    getAll:    ()                           => ipcRenderer.invoke('settings:get-all'),
-    getApiKey: (provider: string)           => ipcRenderer.invoke('settings:get-api-key', provider),
-    setApiKey: (provider: string, key: string) =>
-                 ipcRenderer.invoke('settings:set-api-key', provider, key),
-    detectClaudeCode: () => ipcRenderer.invoke('settings:detectClaudeCode')
-  },
+  getAllSettings: () => ipcRenderer.invoke('settings:getAll'),
+  getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
+  setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
+  setApiKey: (provider: string, key: string) => ipcRenderer.invoke('settings:setApiKey', provider, key),
+  hasApiKey: (provider: string) => ipcRenderer.invoke('settings:hasApiKey', provider),
+  testConnection: (provider: string) => ipcRenderer.invoke('settings:testConnection', provider),
 
-  // Listen for events pushed from main → renderer
-  // Track registered listeners so off() only removes what we added
-  on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const allowed = [
-      'emotion:update',
-      'hotkey:toggle-chat',
-      'navigate',
-      'memory:cleared',
-      'sprite:walk-direction',
-      'sprite:status'
-    ]
-    if (!allowed.includes(channel)) return
-    const wrapper = (_e: unknown, ...args: unknown[]) => callback(...args)
-    ;(wrapper as any).__fumiiOriginal = callback
-    ipcRenderer.on(channel, wrapper)
-  },
+  // Mode (software-only stand-in for the hardware rotary switch — Phase 2 will
+  // add the real device toggle; this drives the same SQLite key + prompt path)
+  getMode: () => ipcRenderer.invoke('settings:get', 'active_mode'),
+  setMode: (mode: 'companion' | 'assistant') => ipcRenderer.invoke('settings:set', 'active_mode', mode),
 
-  off: (channel: string, callback?: (...args: unknown[]) => void) => {
-    if (callback) {
-      // Remove specific listener
-      const listeners = ipcRenderer.listeners(channel)
-      for (const fn of listeners) {
-        if ((fn as any).__fumiiOriginal === callback) {
-          ipcRenderer.removeListener(channel, fn as any)
-          break
-        }
-      }
-    } else {
-      ipcRenderer.removeAllListeners(channel)
+  // Hardware / Device & Zero-Friction Pairing
+  getDeviceStatus: () => ipcRenderer.invoke('hardware:getStatus'),
+  getPairingStatus: () => ipcRenderer.invoke('hardware:getPairingStatus'),
+  pairDevice: () => ipcRenderer.invoke('hardware:pairDevice'),
+  unpairDevice: () => ipcRenderer.invoke('hardware:unpairDevice'),
+  setDeviceMode: (mode: 'companion' | 'assistant') => ipcRenderer.invoke('hardware:setMode', mode),
+  sendLEDCommand: (color: string, pattern: string) => ipcRenderer.invoke('hardware:sendLED', color, pattern),
+  identifyDevice: () => ipcRenderer.invoke('hardware:identify'),
+  restartDevice: () => ipcRenderer.invoke('hardware:restart'),
+
+  // Pets
+  getInstalledPets: () => ipcRenderer.invoke('pets:list'),
+  getPetRegistry: () => ipcRenderer.invoke('pets:registry'),
+  fetchCodexLibrary: (params: any) => ipcRenderer.invoke('pets:fetchLibrary', params),
+  getActivePet: () => ipcRenderer.invoke('pets:active'),
+  setActivePet: (slug: string) => ipcRenderer.invoke('pets:setActive', slug),
+  installPet: (petData: any) => ipcRenderer.invoke('pets:install', petData),
+  installCustomPet: (slugOrUrl: string) => ipcRenderer.invoke('pets:installCustom', slugOrUrl),
+  downloadAndInstallPet: (petIdentifierOrData: any) => ipcRenderer.invoke('pets:downloadAndInstall', petIdentifierOrData),
+  removeInstalledPet: (slug: string) => ipcRenderer.invoke('pets:remove', slug),
+
+  // Window actions
+  showSprite: () => ipcRenderer.send('window:showSprite'),
+  hideSprite: () => ipcRenderer.send('window:hideSprite'),
+  openChat: () => ipcRenderer.send('window:openChat'),
+  closeChat: () => ipcRenderer.send('window:closeChat'),
+  openDashboard: () => ipcRenderer.send('window:openDashboard'),
+  minimizeDashboard: () => ipcRenderer.send('window:minimizeDashboard'),
+  maximizeDashboard: () => ipcRenderer.send('window:maximizeDashboard'),
+  closeDashboard: () => ipcRenderer.send('window:closeDashboard'),
+
+  // Sprite controls
+  setSpriteState: (state: string) => ipcRenderer.send('sprite:setState', state),
+  setSpriteBehavior: (behavior: string) => ipcRenderer.send('sprite:setBehavior', behavior),
+  setInteractive: (interactive: boolean) => ipcRenderer.send('sprite:setInteractive', interactive),
+  moveSpriteWindow: (dx: number, dy: number) => ipcRenderer.send('sprite:moveBy', dx, dy),
+  setSpritePosition: (x: number, y: number) => ipcRenderer.send('sprite:setPosition', x, y),
+
+  // System diagnostics & self-test
+  runSystemTests: () => ipcRenderer.invoke('system:runTests'),
+
+  // Whisper STT Model Management
+  getWhisperModels: () => ipcRenderer.invoke('whisper:getModels'),
+  downloadWhisperModel: (modelId: string) => ipcRenderer.invoke('whisper:downloadModel', modelId),
+  cancelWhisperDownload: (modelId: string) => ipcRenderer.invoke('whisper:cancelDownload', modelId),
+  deleteWhisperModel: (modelId: string) => ipcRenderer.invoke('whisper:deleteModel', modelId),
+  isWhisperAvailable: (modelId?: string) => ipcRenderer.invoke('whisper:isAvailable', modelId),
+
+  // Microsoft Neural TTS & Audio Synthesis
+  synthesizeTTS: (text: string, options?: any) => ipcRenderer.invoke('tts:synthesize', text, options),
+  getEdgeVoices: () => ipcRenderer.invoke('tts:getEdgeVoices'),
+
+  // Safe Whitelisted Event Prefixes
+  on: (channel: string, handler: (...args: any[]) => void) => {
+    const ALLOWED_NAMESPACES = ['device:', 'sprite:', 'chat:', 'pets:', 'whisper:', 'llm:', 'settings:', 'system:', 'updater:'];
+    const isAllowed = ALLOWED_NAMESPACES.some((prefix) => channel.startsWith(prefix));
+    if (!isAllowed) {
+      console.warn(`[preload] Blocked unregistered event subscription: "${channel}"`);
+      return () => {};
     }
-  },
+    const wrapped = (_: unknown, ...args: any[]) => handler(...args);
+    ipcRenderer.on(channel, wrapped);
+    return () => ipcRenderer.removeListener(channel, wrapped);
+  }
+};
 
-  // Safe external URL opening (replaces window.open)
-  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
-})
+contextBridge.exposeInMainWorld('fumii', api);
 
-// Hook the EpisodicLogger's fire-and-forget calls into IPC
-// These are set on window directly since contextBridge only exposes named objects
-contextBridge.exposeInMainWorld('__fumiiObserveTurn', (
-  date: string, signal: string, source: string
-) => {
-  ipcRenderer.invoke('memory:observe-turn', date, signal, source).catch(() => {})
-})
-
-contextBridge.exposeInMainWorld('__fumiiSaveEpisode', (
-  summary: string, tags: string, mood: string, turns: number
-) => {
-  ipcRenderer.invoke('memory:save-episode', summary, tags, mood, turns).catch(() => {})
-})
+export type FumiiAPI = typeof api;

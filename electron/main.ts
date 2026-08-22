@@ -1,366 +1,244 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, dialog, screen } from 'electron'
-import { join } from 'path'
-import { appendFileSync, mkdirSync } from 'fs'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { join } from 'path';
+import { appendFileSync } from 'fs';
 
-function getCrashLogPath(): string {
-  // app may not be ready yet when uncaughtException fires during startup
-  const dir = app?.isReady?.() ? app.getPath('userData') : (process.env.APPDATA ? join(process.env.APPDATA, 'fumii') : '.')
-  try { mkdirSync(dir, { recursive: true }) } catch {}
-  return join(dir, 'crash.log')
+const logFile = join(app.getPath('userData'), 'fumii-debug.log');
+function logStep(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try {
+    appendFileSync(logFile, line);
+    appendFileSync(join(app.getAppPath(), 'fumii-debug.log'), line);
+  } catch {}
+  console.log(msg);
 }
+
+app.setName('fumii');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.fumii.desktop');
+}
+
+logStep('=== FUMII STARTUP INITIATED ===');
 
 process.on('uncaughtException', (err) => {
-  try { appendFileSync(getCrashLogPath(), `[${new Date().toISOString()}] UNCAUGHT: ${err.stack || err.message}\n`) } catch {}
-})
+  logStep(`[FATAL uncaughtException] ${err?.stack || err}`);
+  try { dialog.showErrorBox('fumii Fatal Error', String(err?.stack || err)); } catch {}
+});
+
 process.on('unhandledRejection', (reason) => {
-  try { appendFileSync(getCrashLogPath(), `[${new Date().toISOString()}] REJECTION: ${String(reason)}\n`) } catch {}
-})
+  logStep(`[FATAL unhandledRejection] ${(reason as any)?.stack || reason}`);
+  try { dialog.showErrorBox('fumii Rejection Error', String((reason as any)?.stack || reason)); } catch {}
+});
 
-// Disable CSP warnings in DevTools (Vite requires unsafe-eval for HMR in dev)
-process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
+import { SpriteWindowManager } from './windows/SpriteWindowManager';
+import { DashboardWindowManager } from './windows/DashboardWindowManager';
+import { setupTray, getTray } from './tray';
+import { setupUpdater } from './updater';
+import { registerHotkeys } from './hotkey';
+import { initDb } from './db/schema';
+import { LLMService } from './services/LLMService';
+import { MemoryService } from './services/MemoryService';
+import { PetManager } from './services/PetManager';
+import { registerLLMHandlers } from './ipc/llmHandlers';
+import { registerMemoryHandlers } from './ipc/memoryHandlers';
+import { registerSettingsHandlers } from './ipc/settingsHandlers';
+import { registerPetHandlers } from './ipc/petHandlers';
+import { registerHardwareHandlers } from './ipc/hardwareHandlers';
+import { registerSystemTestHandlers } from './ipc/systemTestHandlers';
+import { MQTTBroker } from './services/MQTTBroker';
+import { AudioStreamer } from './services/AudioStreamer';
+import { WhisperService } from './services/WhisperService';
+import { KokoroTTSService } from './services/KokoroTTSService';
+import { EdgeTTSService } from './services/EdgeTTSService';
+import { registerTTSHandlers } from './ipc/ttsHandlers';
+import { getSetting } from './db/queries';
 
-// GPU crash fix for Windows transparent windows (exception code 0x80000003).
-// The GPU process crashes on certain Windows + driver configurations when using
-// layered/transparent windows. These switches fix it without fully disabling
-// hardware acceleration (which would break transparency).
-app.commandLine.appendSwitch('disable-gpu-sandbox')
-app.commandLine.appendSwitch('disable-software-rasterizer')
-app.commandLine.appendSwitch('no-sandbox')
+// ── Hardware Services (Always-On by default in packaged & dev mode) ──────────
+const ENABLE_HARDWARE = process.env.DISABLE_HARDWARE !== '1';
 
-// Single-instance lock — no duplicate fumii processes
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-  process.exit(0)
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+  process.exit(0);
 }
 
-import { registerHotkeys } from './hotkey'
-import { createTray } from './tray'
-import { registerMemoryHandlers } from './ipc/memoryHandlers'
-import { registerLLMHandlers, destroyClaudeCode } from './ipc/llmHandlers'
-import { registerSettingsHandlers } from './ipc/settingsHandlers'
-import { initDatabase } from '../src/memory/MemoryStore'
+let spriteManager: SpriteWindowManager;
+let dashboardManager: DashboardWindowManager;
 
-let spriteWindow: BrowserWindow | null = null
-let dashboardWindow: BrowserWindow | null = null
-
-const SPRITE_W_CLOSED = 280
-const SPRITE_W_OPEN   = 380   // 360 chat + 20px padding
-const SPRITE_H_CLOSED = 220
-const SPRITE_H_OPEN   = 680
-
-// ── Wander system ─────────────────────────────────────────────────────────
-// Moves the sprite window smoothly across the work area, like lenny-lil-agents.
-
-const WALK_SPEED_PX = 1.5     // px per tick
-const WALK_TICK_MS  = 33      // ~30 fps (sufficient for slow walk animation)
-const PAUSE_MIN_MS  = 2500
-const PAUSE_MAX_MS  = 7000
-
-let walkTarget:    number | null = null
-let walkTimerId:   ReturnType<typeof setInterval> | null = null
-let wanderPause:   ReturnType<typeof setTimeout>  | null = null
-let chatOpen       = false
-let isQuitting     = false
-let lastWalkDir: 'left' | 'right' | 'idle' = 'idle'
-
-function getWorkArea() {
-  if (spriteWindow && !spriteWindow.isDestroyed()) {
-    return screen.getDisplayMatching(spriteWindow.getBounds()).workArea
+app.on('second-instance', () => {
+  if (dashboardManager) {
+    dashboardManager.show();
   }
-  return screen.getPrimaryDisplay().workArea
-}
-
-function sendWalkDir(dir: 'left' | 'right' | 'idle') {
-  if (dir === lastWalkDir) return
-  lastWalkDir = dir
-  spriteWindow?.webContents.send('sprite:walk-direction', dir)
-}
-
-/** Clear all wander timers and reset references to null */
-function stopWander() {
-  if (walkTimerId) { clearInterval(walkTimerId); walkTimerId = null }
-  if (wanderPause) { clearTimeout(wanderPause);  wanderPause = null }
-  walkTarget = null
-  sendWalkDir('idle')
-}
-
-function scheduleNextWalk() {
-  if (wanderPause) { clearTimeout(wanderPause); wanderPause = null }
-  const delay = PAUSE_MIN_MS + Math.random() * (PAUSE_MAX_MS - PAUSE_MIN_MS)
-  wanderPause = setTimeout(pickTarget, delay)
-}
-
-function pickTarget() {
-  if (!spriteWindow || chatOpen) { scheduleNextWalk(); return }
-  const wa = getWorkArea()
-  const minX = wa.x + 20
-  const maxX = wa.x + wa.width - SPRITE_W_CLOSED - 20
-  if (maxX <= minX) return  // screen too small
-  walkTarget = Math.floor(minX + Math.random() * (maxX - minX))
-}
-
-/** Clamp x so the window never leaves the visible work area */
-function clampX(x: number): number {
-  const wa = getWorkArea()
-  const min = wa.x
-  const max = wa.x + wa.width - SPRITE_W_CLOSED
-  return Math.max(min, Math.min(max, x))
-}
-
-function startWander() {
-  stopWander()  // always clear first to prevent stacking
-  scheduleNextWalk()
-  walkTimerId = setInterval(() => {
-    if (!spriteWindow || chatOpen || walkTarget === null) return
-    const [cx, cy] = spriteWindow.getPosition()
-    const dx = walkTarget - cx
-    if (Math.abs(dx) < WALK_SPEED_PX) {
-      spriteWindow.setPosition(clampX(walkTarget), cy)
-      walkTarget = null
-      sendWalkDir('idle')
-      scheduleNextWalk()
+  if (spriteManager) {
+    if (!spriteManager.window || spriteManager.window.isDestroyed()) {
+      spriteManager.create();
     } else {
-      const step = Math.sign(dx) * WALK_SPEED_PX
-      const nextX = clampX(Math.round(cx + step))
-      spriteWindow.setPosition(nextX, cy)
-      sendWalkDir(dx > 0 ? 'right' : 'left')
+      spriteManager.window.show();
+      spriteManager.window.focus();
     }
-  }, WALK_TICK_MS)
-}
-
-// ── Window helpers ─────────────────────────────────────────────────────────
-
-function getSpritePos(isOpen: boolean): { x: number; y: number } {
-  const wa = getWorkArea()
-  const w = isOpen ? SPRITE_W_OPEN : SPRITE_W_CLOSED
-  const h = isOpen ? SPRITE_H_OPEN : SPRITE_H_CLOSED
-  return {
-    x: wa.x + wa.width  - w - 16,
-    y: wa.y + wa.height - h - 16
   }
-}
-
-function createSpriteWindow(): BrowserWindow {
-  const { x, y } = getSpritePos(false)
-
-  const win = new BrowserWindow({
-    width:           SPRITE_W_CLOSED,
-    height:          SPRITE_H_CLOSED,
-    x,
-    y,
-    transparent:     true,
-    backgroundColor: '#00000000',
-    frame:           false,
-    alwaysOnTop:     true,
-    skipTaskbar:     true,
-    resizable:       false,
-    movable:         true,
-    webPreferences: {
-      preload:          join(__dirname, '../preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration:  false,
-      sandbox:          false,
-      webSecurity:      true,
-      devTools:         !app.isPackaged
-    }
-  })
-
-  win.setIgnoreMouseEvents(true, { forward: true })
-
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-  if (devUrl) {
-    win.loadURL(`${devUrl}/public/sprite.html`)
-  } else {
-    win.loadFile(join(__dirname, '../renderer/public/sprite.html'))
-  }
-
-  // Force close DevTools if they were left open from a previous session,
-  // because DevTools permanently resizes the window and breaks the wander bounds.
-  win.webContents.once('did-finish-load', () => {
-    win.webContents.closeDevTools()
-  })
-
-  win.once('ready-to-show', () => {
-    win.show()
-  })
-
-  return win
-}
-
-function createDashboardWindow(): BrowserWindow {
-  const win = new BrowserWindow({
-    width:           1100,
-    height:          720,
-    minWidth:        860,
-    minHeight:       560,
-    frame:           false,
-    titleBarStyle:   'hidden',
-    backgroundColor: '#FCFCF0',
-    icon:            app.isPackaged ? join(process.resourcesPath, 'assets/sprites/fumii_icon.png') : join(__dirname, '../../src/assets/sprites/fumii_icon.png'),
-    show:            true,
-    webPreferences: {
-      preload:          join(__dirname, '../preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration:  false,
-      sandbox:          false,
-      webSecurity:      true,
-      devTools:         !app.isPackaged
-    }
-  })
-
-  win.on('close', (e) => {
-    if (!isQuitting) {
-      e.preventDefault()
-      win.hide()
-    }
-  })
-
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-  if (devUrl) {
-    win.loadURL(`${devUrl}/public/dashboard.html`)
-  } else {
-    win.loadFile(join(__dirname, '../renderer/public/dashboard.html'))
-  }
-
-  return win
-}
-
-// ── App ready ──────────────────────────────────────────────────────────────
+});
 
 app.whenReady().then(async () => {
-  // Init DB schema before any window opens
-  await initDatabase()
+  try {
+    logStep('[1/8] app.whenReady triggered');
+    const db = initDb();
+    logStep('[2/8] initDb completed');
+    const llm = new LLMService();
+    // Wire per-provider model resolution from settings DB
+    llm.setModelResolver((provider) => getSetting(db, `${provider}_model`) ?? '');
+    const memory = new MemoryService();
+    const pets = new PetManager();
+    await pets.ensureDefaultPet();
+    logStep('[3/8] PetManager default pet ensured');
 
-  spriteWindow    = createSpriteWindow()
-  dashboardWindow = createDashboardWindow()
+    let broker: MQTTBroker | null = null;
+    let audioStreamer: AudioStreamer | null = null;
+    const whisper = new WhisperService();
+    const kokoro = new KokoroTTSService();
+    const edgeTTS = new EdgeTTSService();
 
-  // Register IPC handlers
-  registerMemoryHandlers()
-  registerLLMHandlers()
-  registerSettingsHandlers()
-
-  // ── Sprite / hover IPC ─────────────────────────────────────────────────
-
-  ipcMain.on('sprite:set-mouse-events', (_e, enabled: boolean) => {
-    spriteWindow?.setIgnoreMouseEvents(!enabled, { forward: true })
-  })
-
-  ipcMain.on('chat:toggle', (_e, open: boolean) => {
-    if (!spriteWindow) return
-    chatOpen = open
-    if (open) {
-      // Snap back to home corner when chat opens, pause wander
-      stopWander()
-      const { x, y } = getSpritePos(true)
-      spriteWindow.setBounds({ x, y, width: SPRITE_W_OPEN, height: SPRITE_H_OPEN })
-      spriteWindow.setIgnoreMouseEvents(false)
-    } else {
-      const { x, y } = getSpritePos(false)
-      spriteWindow.setBounds({ x, y, width: SPRITE_W_CLOSED, height: SPRITE_H_CLOSED })
-      setTimeout(() => {
-        if (spriteWindow && !spriteWindow.isDestroyed()) {
-          spriteWindow.setIgnoreMouseEvents(true, { forward: true })
-        }
-      }, 350)
-      // Resume wander after chat closes
-      startWander()
+    if (ENABLE_HARDWARE) {
+      broker = new MQTTBroker(1883);
+      audioStreamer = new AudioStreamer(8765);
+      try {
+        await broker.start();
+        audioStreamer.start();
+        audioStreamer.on('utterance-complete', async (pcm: Buffer) => {
+          try {
+            const transcript = await whisper.transcribe(pcm);
+            spriteManager.window?.webContents.send('device:transcribed', transcript);
+          } catch (e) {
+            console.warn('[whisper] transcription failed', e);
+          }
+        });
+      } catch (e) {
+        console.warn('[hardware] failed to start MQTT/audio services', e);
+      }
     }
-  })
 
-  ipcMain.on('sprite:sleep', () => {
-    if (!spriteWindow) return
-    stopWander()
-    spriteWindow.hide()
-    // Notify dashboard of sleep state
-    dashboardWindow?.webContents.send('sprite:status', 'sleeping')
-  })
+    spriteManager = new SpriteWindowManager();
+    dashboardManager = new DashboardWindowManager();
+    logStep('[4/8] Window managers instantiated');
 
-  ipcMain.on('sprite:wake', () => {
-    if (!spriteWindow) return
-    const { x, y } = getSpritePos(false)
-    spriteWindow.setBounds({ x, y, width: SPRITE_W_CLOSED, height: SPRITE_H_CLOSED })
-    spriteWindow.show()
-    startWander()
-    // Notify dashboard of wake state
-    dashboardWindow?.webContents.send('sprite:status', 'awake')
-  })
+    registerLLMHandlers(ipcMain, {
+      llm,
+      memory,
+      db,
+      getSpriteWindow: () => spriteManager.window,
+      hardware: ENABLE_HARDWARE && audioStreamer ? { kokoro, audioStreamer } : undefined
+    });
+    registerMemoryHandlers(ipcMain, { memory, db });
+    registerSettingsHandlers(ipcMain, { db, llm, whisper });
+    registerPetHandlers(ipcMain, {
+      pets,
+      getSpriteWindow: () => spriteManager.window,
+      getDashboardWindow: () => dashboardManager.window
+    });
+    const hardwareTeardown = registerHardwareHandlers(ipcMain, {
+      db,
+      broker,
+      getSpriteWindow: () => spriteManager.window,
+      getDashboardWindow: () => dashboardManager.window
+    });
+    registerSystemTestHandlers(ipcMain, {
+      db,
+      llm,
+      memory,
+      whisper,
+      getDashboardWindow: () => dashboardManager.window
+    });
+    registerTTSHandlers(edgeTTS);
+    logStep('[5/8] IPC handlers registered');
 
-  // ── Dashboard IPC ──────────────────────────────────────────────────────
+    // Window controls IPC
+    ipcMain.on('sprite:setInteractive', (_e, interactive: boolean) =>
+      spriteManager.setInteractive(interactive)
+    );
+    ipcMain.on('sprite:moveBy', (_e, dx: number, dy: number) => {
+      spriteManager.moveBy(dx, dy);
+    });
+    ipcMain.on('sprite:setPosition', (_e, x: number, y: number) => {
+      spriteManager.setPosition(x, y);
+    });
+    ipcMain.on('sprite:setState', (_e, state: string) => {
+      spriteManager.window?.webContents.send('sprite:stateChanged', state);
+    });
+    ipcMain.on('sprite:setBehavior', (_e, behavior: string) => {
+      spriteManager.window?.webContents.send('sprite:behaviorChanged', behavior);
+    });
+    ipcMain.on('window:showSprite', () => {
+      if (!spriteManager.window || spriteManager.window.isDestroyed()) {
+        spriteManager.create();
+      } else {
+        spriteManager.window.show();
+      }
+    });
+    ipcMain.on('window:hideSprite', () => {
+      spriteManager.window?.hide();
+    });
+    ipcMain.on('window:openChat', () => spriteManager.toggleChat());
+    ipcMain.on('window:closeChat', () => spriteManager.toggleChat());
+    ipcMain.on('window:openDashboard', () => dashboardManager.show());
+    ipcMain.on('window:minimizeDashboard', () => dashboardManager.window?.minimize());
+    ipcMain.on('window:maximizeDashboard', () => {
+      const w = dashboardManager.window;
+      if (!w) return;
+      w.isMaximized() ? w.unmaximize() : w.maximize();
+    });
+    ipcMain.on('window:closeDashboard', () => {
+      app.quit();
+    });
 
-  ipcMain.on('dashboard:open', () => {
-    dashboardWindow?.show()
-    dashboardWindow?.focus()
-  })
+    setupTray({
+      onOpenChat: () => spriteManager.toggleChat(),
+      onOpenDashboard: () => dashboardManager.show(),
+      onQuit: () => app.quit()
+    });
+    setupUpdater(getTray);
+    logStep('[6/8] setupTray & setupUpdater completed');
 
-  ipcMain.on('window:minimize', () => dashboardWindow?.minimize())
+    registerHotkeys({
+      onToggleChat: () => spriteManager.toggleChat(),
+      onOpenDashboard: () => dashboardManager.show(),
+      onHideSprite: () => spriteManager.window?.hide()
+    });
 
-  ipcMain.on('window:maximize', () => {
-    if (dashboardWindow?.isMaximized()) dashboardWindow.unmaximize()
-    else dashboardWindow?.maximize()
-  })
+    spriteManager.create();
+    logStep('[7/8] spriteManager.create() completed');
 
-  ipcMain.on('window:close', () => dashboardWindow?.hide())
+    dashboardManager.show();
+    logStep('[8/8] dashboardManager.show() completed');
 
-  // ── Emotion broadcast ──────────────────────────────────────────────────
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        spriteManager.create();
+        dashboardManager.show();
+      }
+    });
 
-  ipcMain.on('emotion:update', (_e, state: string) => {
-    dashboardWindow?.webContents.send('emotion:update', state)
-  })
+    app.on('before-quit', () => {
+      try {
+        hardwareTeardown?.cleanup();
+      } catch {}
+      try {
+        broker?.stop();
+      } catch {}
+      try {
+        audioStreamer?.stop();
+      } catch {}
+      try {
+        pets?.unwatch();
+      } catch {}
+    });
+  } catch (err) {
+    console.error('[main] Startup error in app.whenReady:', err);
+    try {
+      const { dialog } = require('electron');
+      dialog.showErrorBox('fumii Startup Error', String(err));
+    } catch {}
+  }
+});
 
-  // ── Clear memory (confirmation dialog lives in main) ───────────────────
-
-  ipcMain.handle('memory:clear-all', async () => {
-    if (!dashboardWindow || dashboardWindow.isDestroyed()) return false
-    const { response } = await dialog.showMessageBox(dashboardWindow, {
-      type:      'warning',
-      title:     'Clear all memory',
-      message:   'This will erase everything fumii remembers about you.',
-      detail:    'Episodes, mood logs, transcripts, and your profile will be permanently deleted.',
-      buttons:   ['Cancel', 'Clear everything'],
-      defaultId: 0,
-      cancelId:  0
-    })
-
-    if (response === 1) {
-      const { clearAllMemory } = await import('../src/memory/MemoryStore')
-      clearAllMemory()
-      spriteWindow?.webContents.send('memory:cleared')
-      return true
-    }
-    return false
-  })
-
-  // ── Tray & hotkeys ─────────────────────────────────────────────────────
-
-  createTray(spriteWindow, dashboardWindow)
-  registerHotkeys(spriteWindow, dashboardWindow)
-
-  // Start the wander system once the sprite renderer is ready
-  spriteWindow.webContents.once('did-finish-load', () => {
-    startWander()
-  })
-
-  // macOS activate — show sprite if all windows are hidden
-  app.on('activate', () => {
-    if (!spriteWindow || spriteWindow.isDestroyed()) {
-      spriteWindow = createSpriteWindow()
-    } else {
-      spriteWindow.show()
-    }
-  })
-})
-
-// Keep app alive in tray even when all windows are closed
 app.on('window-all-closed', () => {
-  // intentionally empty — quit only via tray → Quit
-})
-
-app.on('before-quit', () => {
-  isQuitting = true
-})
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-  stopWander()
-  destroyClaudeCode()
-})
+  app.quit();
+});

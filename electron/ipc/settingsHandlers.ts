@@ -1,88 +1,102 @@
-import { ipcMain, shell } from 'electron'
-import { execSync } from 'child_process'
-import { getSetting, setSetting, getAllSettings } from '../../src/memory/MemoryStore'
-import keytar from 'keytar'
+import type { IpcMain } from 'electron';
+import type Database from 'better-sqlite3';
+import { getAllSettings, getSetting, setSetting } from '../db/queries';
+import { LLMService, type Provider } from '../services/LLMService';
+import { WhisperService } from '../services/WhisperService';
 
-const KEYTAR_SERVICE = 'fumii-app'
+type Deps = { db: Database.Database; llm?: LLMService; whisper?: WhisperService };
 
-// Allowlist of valid settings keys — prevents arbitrary SQLite writes
-const VALID_SETTINGS_KEYS = new Set([
-  'user_name', 'llm_provider', 'llm_model', 'sprite_position', 'sprite_scale',
-  'voice_enabled', 'tts_enabled', 'save_transcripts', 'hotkey_chat',
-  'chat_theme', 'completion_chime', 'sprite_drift', 'claude_code_path'
-])
+export function registerSettingsHandlers(ipcMain: IpcMain, deps: Deps) {
+  const { db } = deps;
+  const llm = deps.llm ?? new LLMService();
+  const whisper = deps.whisper ?? new WhisperService();
 
-// Allowlist of valid LLM providers
-const VALID_PROVIDERS = new Set(['mistral', 'openai', 'anthropic', 'ollama', 'claude-code'])
+  ipcMain.handle('settings:getAll', async () => getAllSettings(db));
+  ipcMain.handle('settings:get', async (_e, key: string) => getSetting(db, key));
+  ipcMain.handle('settings:set', async (_e, key: string, value: string) => {
+    setSetting(db, key, value);
+    return true;
+  });
 
-const MAX_SETTING_VALUE_LENGTH = 1024
+  ipcMain.handle('settings:setApiKey', async (_e, provider: Provider, key: string) => {
+    await llm.setApiKey(provider, key);
+    return true;
+  });
 
-// Common Windows install paths for Claude Code CLI
-const CLAUDE_CODE_CANDIDATE_PATHS = [
-  'claude',
-  `C:\\Users\\${process.env['USERNAME']}\\AppData\\Local\\Claude\\claude.exe`,
-  'C:\\Program Files\\Claude\\claude.exe',
-  `C:\\Users\\${process.env['USERNAME']}\\AppData\\Roaming\\npm\\claude.cmd`,
-]
+  ipcMain.handle('settings:hasApiKey', async (_e, provider: Provider) => llm.hasApiKey(provider));
 
-export function registerSettingsHandlers(): void {
-  ipcMain.handle('settings:get', (_event, key: string) => {
-    if (typeof key !== 'string' || !VALID_SETTINGS_KEYS.has(key)) return null
-    return getSetting(key)
-  })
-
-  ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
-    if (typeof key !== 'string' || !VALID_SETTINGS_KEYS.has(key)) return false
-    const strValue = String(value).slice(0, MAX_SETTING_VALUE_LENGTH)
-    setSetting(key, strValue)
-    return true
-  })
-
-  ipcMain.handle('settings:get-all', () => getAllSettings())
-
-  // API keys go through OS keychain — never plain SQLite
-  ipcMain.handle('settings:get-api-key', async (_event, provider: string) => {
-    if (typeof provider !== 'string' || !VALID_PROVIDERS.has(provider)) return ''
-    const key = await keytar.getPassword(KEYTAR_SERVICE, provider)
-    if (key && key.length > 8) {
-      return '•'.repeat(key.length - 4) + key.slice(-4)
-    }
-    return key ? '••••' : ''
-  })
-
-  ipcMain.handle('settings:set-api-key', async (_event, provider: string, apiKey: string) => {
-    if (typeof provider !== 'string' || !VALID_PROVIDERS.has(provider)) return false
-    if (!apiKey || typeof apiKey !== 'string' || apiKey.includes('•')) return false
-    if (apiKey.length > 256) return false // API keys shouldn't exceed this
-    await keytar.setPassword(KEYTAR_SERVICE, provider, apiKey)
-    return true
-  })
-
-  // Detect Claude Code CLI in common install locations
-  ipcMain.handle('settings:detectClaudeCode', async () => {
-    for (const candidate of CLAUDE_CODE_CANDIDATE_PATHS) {
-      try {
-        execSync(`"${candidate}" --version`, { timeout: 3000, stdio: 'ignore' })
-        return { found: true, path: candidate }
-      } catch {
-        // not at this path — try next
-      }
-    }
-    return { found: false, path: null }
-  })
-
-  // Safe external URL opening — replaces window.open in renderer
-  ipcMain.handle('shell:open-external', async (_event, url: string) => {
-    if (typeof url !== 'string') return false
-    // Only allow https URLs
+  ipcMain.handle('settings:testConnection', async (_e, provider: Provider) => {
     try {
-      const parsed = new URL(url)
-      if (parsed.protocol !== 'https:') return false
-      await shell.openExternal(url)
-      return true
-    } catch {
-      return false
-    }
-  })
-}
+      if (provider !== 'ollama') {
+        const key = await llm.getApiKey(provider);
+        if (!key || !key.trim()) {
+          return { ok: false, error: `No API key saved for ${provider}. Please enter your key and click Save first.` };
+        }
+      } else {
+        const isUp = await llm.isOllamaUp();
+        if (!isUp) {
+          return { ok: false, error: 'Ollama is not running at http://localhost:11434. Start Ollama and try again.' };
+        }
+      }
 
+      let full = '';
+      await llm.chatStreamProvider(
+        provider,
+        [
+          { role: 'system', content: 'reply with exactly: ok' },
+          { role: 'user', content: 'ping' }
+        ],
+        (t) => {
+          full += t;
+        }
+      );
+
+      if (!full.trim()) {
+        return { ok: false, error: `${provider} connected but returned an empty response.` };
+      }
+
+      return { ok: true, response: full.trim().slice(0, 80) };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'connection failed' };
+    }
+  });
+
+  // ─── Whisper STT Model Management ────────────────────────────────────────
+  ipcMain.handle('whisper:getModels', async () => {
+    const activeModel = getSetting(db, 'whisper_model') ?? 'base.en';
+    return whisper.getModels(activeModel);
+  });
+
+  ipcMain.handle('whisper:downloadModel', async (event, modelId: string) => {
+    const onProgress = (data: any) => event.sender.send('whisper:downloadProgress', data);
+    const onDone = (data: any) => event.sender.send('whisper:downloadDone', data);
+    const onError = (data: any) => event.sender.send('whisper:downloadError', data);
+
+    whisper.once('download-done', onDone);
+    whisper.once('download-error', onError);
+    whisper.on('download-progress', onProgress);
+
+    try {
+      await whisper.downloadModel(modelId);
+    } finally {
+      whisper.off('download-progress', onProgress);
+      whisper.off('download-done', onDone);
+      whisper.off('download-error', onError);
+    }
+    return { ok: true };
+  });
+
+  ipcMain.handle('whisper:cancelDownload', async (_e, modelId: string) => {
+    whisper.cancelDownload(modelId);
+    return true;
+  });
+
+  ipcMain.handle('whisper:deleteModel', async (_e, modelId: string) => {
+    whisper.deleteModel(modelId);
+    return true;
+  });
+
+  ipcMain.handle('whisper:isAvailable', async (_e, modelId?: string) => {
+    return whisper.isAvailable(modelId);
+  });
+}

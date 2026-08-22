@@ -1,21 +1,13 @@
 {
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "include": ["src/**/*"],
   "compilerOptions": {
-    "composite":      true,
-    "target":         "ESNext",
-    "module":         "ESNext",
-    "moduleResolution": "bundler",
-    "strict":         true,
-    "noEmit":         false,
-    "jsx":            "react-jsx",
-    "baseUrl":        ".",
+    "composite": true,
+    "jsx": "react-jsx",
+    "noUnusedLocals": false,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "skipLibCheck":   true,
-    "types":          [],
-    "lib":            ["ESNext", "DOM", "DOM.Iterable"],
-    "esModuleInterop": true,
-    "resolveJsonModule": true
-  },
-  "include": ["src/**/*", "public/**/*"]
+    }
+  }
 }

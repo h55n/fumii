@@ -1,39 +1,78 @@
 {
-  "appId": "com.fumii.app",
+  "appId": "com.fumii.desktop",
   "productName": "fumii",
-  "copyright": "fumii contributors",
-  "icon": "build/icon.png",
+  "copyright": "Copyright © 2025 fumii",
   "directories": {
     "output": "release",
-    "buildResources": "build"
+    "buildResources": "assets"
   },
   "files": [
-    "dist/**/*",
-    "package.json",
-    "!dist/**/*.map"
+    "out/**/*",
+    "assets/**/*",
+    "package.json"
+  ],
+  "asarUnpack": [
+    "**/*.node",
+    "**/node_modules/better-sqlite3/**",
+    "**/node_modules/keytar/**"
   ],
   "extraResources": [
+    { "from": "assets/pets",    "to": "pets" },
+    { "from": "scripts",        "to": "scripts",  "filter": ["**/*"] },
+    { "from": "assets/sounds",  "to": "sounds",   "filter": ["**/*"] }
+  ],
+  "publish": [
     {
-      "from": "src/assets",
-      "to":   "assets"
+      "provider": "github",
+      "releaseType": "release"
     }
   ],
   "win": {
-    "target":          [{ "target": "nsis", "arch": ["x64"] }],
-    "icon":            "build/icon.ico",
-    "artifactName":   "${productName}-setup-${version}.${ext}"
+    "target": [
+      { "target": "nsis", "arch": ["x64"] },
+      { "target": "dir", "arch": ["x64"] }
+    ],
+    "icon": "assets/icon.ico",
+    "requestedExecutionLevel": "asInvoker",
+    "signAndEditExecutable": false,
+    "executableName": "fumii",
+    "legalTrademarks": "fumii",
+    "publisherName": "fumii",
+    "artifactName": "fumii-${version}-windows-setup.${ext}"
   },
   "nsis": {
-    "oneClick":                false,
-    "perMachine":              true,
+    "oneClick": true,
+    "perMachine": false,
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": false,
-    "createDesktopShortcut":   true,
+    "shortcutName": "fumii",
+    "createDesktopShortcut": true,
     "createStartMenuShortcut": true
   },
-  "asar":       true,
-  "asarUnpack": [
-    "**/node_modules/better-sqlite3/**",
-    "**/node_modules/keytar/**"
-  ]
+  "mac": {
+    "target": [
+      { "target": "dmg", "arch": ["universal", "x64", "arm64"] },
+      { "target": "zip", "arch": ["universal", "x64", "arm64"] }
+    ],
+    "icon": "assets/icon.png",
+    "category": "public.app-category.lifestyle",
+    "artifactName": "fumii-${version}-macOS-${arch}.${ext}",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "assets/entitlements.mac.plist",
+    "entitlementsInherit": "assets/entitlements.mac.plist"
+  },
+  "dmg": {
+    "sign": false
+  },
+  "linux": {
+    "target": [
+      { "target": "AppImage", "arch": ["x64"] },
+      { "target": "deb", "arch": ["x64"] }
+    ],
+    "icon": "assets/icon.png",
+    "category": "Utility",
+    "maintainer": "fumii <support@fumii.app>",
+    "artifactName": "fumii-${version}-linux-${arch}.${ext}"
+  }
 }

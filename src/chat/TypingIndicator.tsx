@@ -1,29 +1,26 @@
-import React from 'react'
+import React from 'react';
 
 export function TypingIndicator() {
   return (
-    <div style={{
-      padding: '4px 16px 8px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4
-    }}>
-      {[0, 1, 2].map(i => (
-        <div key={i} style={{
-          width: 5,
-          height: 5,
-          borderRadius: '50%',
-          background: '#F5A623',
-          animation: `dot-pulse 1.2s ease-in-out infinite`,
-          animationDelay: `${i * 0.18}s`
-        }} />
+    <div style={{ display: 'flex', gap: 5, padding: '12px 16px' }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: 'var(--color-amber)',
+            animation: `typing-bounce 1.4s ease-in-out ${i * 0.2}s infinite`
+          }}
+        />
       ))}
       <style>{`
-        @keyframes dot-pulse {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
+        @keyframes typing-bounce {
+          0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+          40% { transform: scale(1.0); opacity: 1.0; }
         }
       `}</style>
     </div>
-  )
+  );
 }

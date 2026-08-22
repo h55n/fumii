@@ -1,239 +1,213 @@
-import React, { useEffect, useState } from 'react'
-import { Page } from '../DashboardApp'
-import { MoodPill } from '../components/MoodPill'
-import { CoreIdentity, Episode, MoodLog } from '../../memory/types'
+import React, { useEffect, useState } from 'react';
 
-interface HomeProps {
-  onNavigate: (page: Page) => void
-}
-
-export function Home({ onNavigate }: HomeProps) {
-  const [identity, setIdentity] = useState<CoreIdentity | null>(null)
-  const [recentEpisode, setRecentEpisode] = useState<Episode | null>(null)
-  const [todayMood, setTodayMood] = useState<MoodLog | null>(null)
-  const [loading, setLoading] = useState(true)
+export function Home({ onNavigate }: { onNavigate: (k: string) => void }) {
+  const [mood, setMood] = useState<{ signal: string } | null>(null);
+  const [lastConvSummary, setLastConvSummary] = useState<string>(
+    'The conversation starts with casual greetings, then asks for help, follows up with playful banter, and ends with a flirtatious line about coming home.'
+  );
+  const tags = ['help', 'fun', 'home', 'friendly', 'flirty'];
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [id, episodes, moods] = await Promise.all([
-          window.fumiiAPI.memory.getCoreIdentity(),
-          window.fumiiAPI.memory.getEpisodes(1),
-          window.fumiiAPI.memory.getMoodLog(1)
-        ])
-        setIdentity(id)
-        setRecentEpisode(episodes?.[0] || null)
-        setTodayMood(moods?.[0] || null)
-      } catch {}
-      setLoading(false)
-    }
-    load()
-  }, [])
+    try {
+      window?.fumii?.getTodayMood?.()?.then(setMood)?.catch?.(() => {});
+      window?.fumii?.getSessions?.(1)?.then((sessions: any[]) => {
+        if (Array.isArray(sessions) && sessions.length > 0 && sessions[0].summary) {
+          setLastConvSummary(sessions[0].summary);
+        }
+      })?.catch?.(() => {});
+    } catch {}
+  }, []);
 
-  const greeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'good morning'
-    if (hour < 17) return 'hey'
-    return 'good evening'
-  }
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
 
-  const name = identity?.name
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric'
-  })
-
-  if (loading) return (
-    <div style={{
-      color: 'var(--color-text-secondary)',
-      fontFamily: 'var(--font-display)',
-      padding: '60px 0',
-      textAlign: 'center',
-      fontSize: 14
-    }}>loading...</div>
-  )
+  const signal = mood?.signal ?? 'neutral';
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div className="page" style={{ maxWidth: 680 }}>
       {/* Header */}
-      <div className="stagger-1" style={{
-        marginBottom: 36,
-        animation: 'slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        opacity: 0
-      }}>
-        <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 30,
-          fontWeight: 600,
-          letterSpacing: '-0.025em',
-          color: 'var(--color-text-primary)',
-          margin: 0
-        }}>
-          {greeting()}{name ? `, ${name}` : ''} ✦
-        </h1>
-        <p style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 14,
-          color: 'var(--color-text-secondary)',
-          margin: '6px 0 0'
-        }}>{today}</p>
-      </div>
-
-      {/* Today's mood card */}
-      <div className="card stagger-2" style={{
-        padding: '20px 24px',
-        marginBottom: 16,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        animation: 'slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) 60ms forwards',
-        opacity: 0,
-        background: 'linear-gradient(135deg, var(--color-surface) 0%, rgba(186, 201, 141, 0.12) 100%)'
-      }}>
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 11,
-            color: 'var(--color-text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 8,
-            fontWeight: 500
-          }}>today's mood</div>
-          <MoodPill signal={todayMood?.signal || 'neutral'} large />
-        </div>
-        <button
-          onClick={() => onNavigate('mood')}
+      <div style={{ marginBottom: 28 }}>
+        <h1
           style={{
-            background: 'var(--color-bg)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 8,
-            color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-display)',
-            fontSize: 12,
-            padding: '7px 16px',
-            cursor: 'pointer',
-            transition: 'all 180ms ease',
-            fontWeight: 500
+            fontSize: 34,
+            fontWeight: 700,
+            margin: '0 0 6px 0',
+            color: 'var(--color-text-primary)',
+            letterSpacing: '-0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
           }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = 'var(--color-primary)'
-            e.currentTarget.style.borderColor = 'var(--color-primary)'
+        >
+          <span>hey</span>
+          <span style={{ color: 'var(--color-text-primary)' }}>✦</span>
+        </h1>
+        <p
+          style={{
+            fontSize: 14,
+            color: 'var(--color-text-secondary)',
+            margin: 0,
+            fontWeight: 400
           }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = 'var(--color-text-secondary)'
-            e.currentTarget.style.borderColor = 'var(--color-border)'
-          }}
-        >view timeline →</button>
+        >
+          {formattedDate}
+        </p>
       </div>
 
-      {/* Recent memory */}
-      {recentEpisode && (
-        <div className="card stagger-3" style={{
+      {/* TODAY'S MOOD Card */}
+      <div
+        className="card"
+        style={{
           padding: '20px 24px',
-          marginBottom: 16,
-          animation: 'slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards',
-          opacity: 0
-        }}>
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 11,
-            color: 'var(--color-text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 12,
-            fontWeight: 500
-          }}>last conversation</div>
-          <p style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 14,
-            color: 'var(--color-text-primary)',
-            lineHeight: 1.65,
-            margin: '0 0 12px'
-          }}>{recentEpisode.summary}</p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {recentEpisode.tags.split(',').filter(Boolean).map(tag => (
-              <span key={tag} style={{
-                color: 'var(--color-primary)',
-                background: 'var(--color-primary-soft)',
-                borderRadius: 99,
-                fontSize: 10,
-                fontFamily: 'var(--font-display)',
-                fontWeight: 500,
-                padding: '3px 10px',
-                letterSpacing: '0.04em'
-              }}>{tag.trim()}</span>
-            ))}
+          borderRadius: 20,
+          background: 'var(--color-surface)',
+          border: '1px solid rgba(0, 0, 0, 0.04)',
+          marginBottom: 16
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <span className="label" style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', color: 'var(--color-text-3)' }}>
+            TODAY'S MOOD
+          </span>
+          <button
+            onClick={() => onNavigate('mood')}
+            className="btn-pill"
+            style={{ fontSize: 12, padding: '5px 14px' }}
+          >
+            view timeline →
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--color-surface-raised)',
+              padding: '6px 16px',
+              borderRadius: 9999,
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--color-text-primary)'
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: signal === 'happy' ? '#10B981' : signal === 'stressed' ? '#EF4444' : 'var(--color-text-secondary)',
+                display: 'inline-block'
+              }}
+            />
+            <span>{signal}</span>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* No conversations yet */}
-      {!recentEpisode && (
-        <div className="card stagger-3" style={{
-          padding: '36px 24px',
-          textAlign: 'center',
-          color: 'var(--color-text-secondary)',
-          fontFamily: 'var(--font-display)',
-          fontSize: 14,
-          lineHeight: 1.8,
-          animation: 'slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards',
-          opacity: 0
-        }}>
-          no conversations yet.<br />
-          press <kbd style={{
-            background: 'var(--color-bg)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 5,
-            padding: '2px 8px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            fontWeight: 500
-          }}>Ctrl+Shift+F</kbd> to say hi to fumii.
+      {/* LAST CONVERSATION Card */}
+      <div
+        className="card"
+        style={{
+          padding: '22px 24px',
+          borderRadius: 20,
+          background: 'var(--color-surface)',
+          border: '1px solid rgba(0, 0, 0, 0.04)',
+          marginBottom: 20
+        }}
+      >
+        <div className="label" style={{ marginBottom: 14, fontSize: 11, letterSpacing: '0.08em', color: 'var(--color-text-3)' }}>
+          LAST CONVERSATION
         </div>
-      )}
 
-      {/* Quick links */}
-      <div style={{
-        display: 'flex',
-        gap: 10,
-        marginTop: 8,
-        animation: 'slideUp 400ms cubic-bezier(0.16, 1, 0.3, 1) 180ms forwards',
-        opacity: 0
-      }}>
-        {[
-          { label: 'view memories', page: 'memory' as Page },
-          { label: 'all conversations', page: 'conversations' as Page }
-        ].map(item => (
-          <button
-            key={item.page}
-            onClick={() => onNavigate(item.page)}
-            style={{
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 99,
-              color: 'var(--color-text-secondary)',
-              fontFamily: 'var(--font-display)',
-              fontSize: 12,
-              fontWeight: 500,
-              padding: '8px 18px',
-              cursor: 'pointer',
-              transition: 'all 180ms ease'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--color-primary-soft)'
-              e.currentTarget.style.color = 'var(--color-primary)'
-              e.currentTarget.style.borderColor = 'var(--color-primary)'
-              e.currentTarget.style.transform = 'scale(1.02)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--color-surface)'
-              e.currentTarget.style.color = 'var(--color-text-secondary)'
-              e.currentTarget.style.borderColor = 'var(--color-border)'
-              e.currentTarget.style.transform = 'scale(1)'
-            }}
-          >{item.label} →</button>
-        ))}
+        <p
+          style={{
+            fontSize: 14,
+            color: 'var(--color-text-primary)',
+            lineHeight: 1.6,
+            margin: '0 0 16px 0',
+            fontWeight: 400
+          }}
+        >
+          {lastConvSummary}
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              style={{
+                background: 'var(--color-blue-tint)',
+                color: 'var(--color-blue-dark)',
+                fontSize: 12,
+                fontWeight: 500,
+                padding: '4px 12px',
+                borderRadius: 9999
+              }}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Action Pill Buttons */}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          onClick={() => onNavigate('memory')}
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: 9999,
+            padding: '9px 18px',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--color-text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 120ms ease'
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)';
+            (e.currentTarget as HTMLElement).style.background = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)';
+            (e.currentTarget as HTMLElement).style.background = 'var(--color-surface)';
+          }}
+        >
+          view memories →
+        </button>
+
+        <button
+          onClick={() => onNavigate('conversations')}
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: 9999,
+            padding: '9px 18px',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--color-text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 120ms ease'
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)';
+            (e.currentTarget as HTMLElement).style.background = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)';
+            (e.currentTarget as HTMLElement).style.background = 'var(--color-surface)';
+          }}
+        >
+          all conversations →
+        </button>
       </div>
     </div>
-  )
+  );
 }

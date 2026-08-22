@@ -1,30 +1,17 @@
-import { globalShortcut, BrowserWindow } from 'electron'
+import { globalShortcut, app } from 'electron';
 
-export function registerHotkeys(
-  spriteWindow: BrowserWindow,
-  dashboardWindow: BrowserWindow
-): void {
-  // Ctrl+Shift+F — toggle chat overlay
-  globalShortcut.register('CommandOrControl+Shift+F', () => {
-    spriteWindow.webContents.send('hotkey:toggle-chat')
-  })
+export function registerHotkeys(handlers: {
+  onToggleChat: () => void;
+  onOpenDashboard: () => void;
+  onHideSprite: () => void;
+}) {
+  app.whenReady().then(() => {
+    globalShortcut.register('CommandOrControl+Shift+F', handlers.onToggleChat);
+    globalShortcut.register('CommandOrControl+Shift+D', handlers.onOpenDashboard);
+    globalShortcut.register('CommandOrControl+Shift+H', handlers.onHideSprite);
+  });
 
-  // Ctrl+Shift+D — open dashboard
-  globalShortcut.register('CommandOrControl+Shift+D', () => {
-    dashboardWindow.show()
-    dashboardWindow.focus()
-  })
-
-  // Ctrl+Shift+H — hide/show sprite window
-  globalShortcut.register('CommandOrControl+Shift+H', () => {
-    if (spriteWindow.isVisible()) {
-      spriteWindow.hide()
-    } else {
-      spriteWindow.show()
-    }
-  })
-}
-
-export function unregisterAll(): void {
-  globalShortcut.unregisterAll()
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+  });
 }

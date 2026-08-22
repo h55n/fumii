@@ -1,0 +1,8 @@
+{
+  "name": "fumii",
+  "slug": "fumii-default",
+  "tags": ["companion", "amber", "hooded"],
+  "frameSize": [192, 208],
+  "grid": [8, 9],
+  "rows": ["idle", "wave", "run", "failed", "review", "jump", "extra1", "extra2", "custom"]
+}

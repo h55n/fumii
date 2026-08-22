@@ -1,154 +1,124 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useRef, useState } from 'react';
 
-interface ChatInputProps {
-  onSend: (text: string) => void
-  disabled: boolean
-  onActivity: () => void
-  voiceEnabled: boolean
+interface Props {
+  onSend: (text: string) => void;
+  disabled?: boolean;
 }
 
-export function ChatInput({ onSend, disabled, onActivity, voiceEnabled }: ChatInputProps) {
-  const [text, setText] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const recognitionRef = useRef<any>(null)
+// Web Speech API — desktop STT path (PRD §10, Path A). No API key, audio
+// never leaves the device; only available in Chromium-based renderers,
+// which Electron always is.
+const SpeechRecognitionCtor: any =
+  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-  const handleSend = () => {
-    const trimmed = text.trim()
-    if (!trimmed || disabled) return
-    onSend(trimmed)
-    setText('')
-  }
+export function ChatInput({ onSend, disabled }: Props) {
+  const [value, setValue] = useState('');
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    onSend(trimmed);
+    setValue('');
+  };
+
+  const toggleVoice = () => {
+    if (!SpeechRecognitionCtor) return;
+
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
     }
-    onActivity()
-  }
 
-  const startListening = useCallback(() => {
-    if (!voiceEnabled) return
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-    if (!SpeechRecognition) return
-
-    const recognition = new SpeechRecognition()
-    recognition.lang = 'en-US'
-    recognition.interimResults = false
-    recognition.maxAlternatives = 1
-
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
     recognition.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript
-      setText(prev => prev ? prev + ' ' + transcript : transcript)
-    }
-
-    recognition.onend = () => setIsListening(false)
-    recognition.onerror = () => setIsListening(false)
-
-    recognition.start()
-    recognitionRef.current = recognition
-    setIsListening(true)
-  }, [voiceEnabled])
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop()
-    setIsListening(false)
-  }, [])
+      const transcript = e.results[0][0].transcript;
+      onSend(transcript);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  };
 
   return (
-    <div style={{
-      padding: '10px 12px 12px',
-      display: 'flex',
-      gap: 8,
-      alignItems: 'flex-end'
-    }}>
-      <div style={{
-        flex: 1,
-        background: '#22223A',
-        border: `1px solid ${text ? 'rgba(245,166,35,0.4)' : 'rgba(255,255,255,0.06)'}`,
-        borderRadius: 12,
-        transition: 'border-color 150ms',
-        display: 'flex',
-        alignItems: 'flex-end'
-      }}>
-        <textarea
-          value={text}
-          onChange={e => { setText(e.target.value); onActivity() }}
-          onKeyDown={handleKeyDown}
-          placeholder="say something..."
-          disabled={disabled}
-          rows={1}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            outline: 'none',
-            color: '#EEEAE0',
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontSize: 14,
-            lineHeight: 1.5,
-            padding: '10px 12px',
-            resize: 'none',
-            maxHeight: 100,
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            opacity: disabled ? 0.5 : 1
-          }}
-        />
-      </div>
-
-      {/* Voice button */}
-      {voiceEnabled && (
-        <button
-          onMouseDown={startListening}
-          onMouseUp={stopListening}
-          onMouseLeave={stopListening}
-          disabled={disabled}
-          title="Hold to speak"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: isListening ? 'rgba(245,166,35,0.25)' : '#22223A',
-            border: `1px solid ${isListening ? 'rgba(245,166,35,0.7)' : 'rgba(255,255,255,0.08)'}`,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: isListening ? '#F5A623' : '#9E9A8E',
-            fontSize: 16,
-            transition: 'all 150ms',
-            boxShadow: isListening ? '0 0 12px rgba(245,166,35,0.3)' : 'none',
-            flexShrink: 0
-          }}
-        >
-          🎤
-        </button>
-      )}
-
-      {/* Send button */}
+    <div style={{ display: 'flex', gap: 8, padding: '10px 14px 14px', alignItems: 'center' }}>
+      <input
+        value={value}
+        disabled={disabled}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') submit();
+        }}
+        placeholder="talk to fumii..."
+        style={{
+          flex: 1,
+          background: 'var(--color-surface-raised)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 14px',
+          color: 'var(--color-text-primary)',
+          fontFamily: 'var(--font-display)',
+          fontSize: 14,
+          outline: 'none',
+          opacity: disabled ? 0.6 : 1
+        }}
+      />
       <button
-        onClick={handleSend}
-        disabled={!text.trim() || disabled}
+        onClick={submit}
+        disabled={disabled || !value.trim()}
+        title="Send message"
         style={{
           width: 36,
           height: 36,
-          borderRadius: 10,
-          background: text.trim() && !disabled ? '#F5A623' : '#22223A',
-          border: 'none',
-          cursor: text.trim() && !disabled ? 'pointer' : 'not-allowed',
+          borderRadius: 'var(--radius-full)',
+          background: disabled || !value.trim() ? 'var(--color-surface-raised)' : 'var(--color-amber)',
+          border: `1px solid ${disabled || !value.trim() ? 'var(--color-border)' : 'var(--color-amber)'}`,
+          color: disabled || !value.trim() ? 'var(--color-text-3)' : 'var(--color-bg)',
+          cursor: disabled || !value.trim() ? 'default' : 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: text.trim() && !disabled ? '#0F0F14' : '#9E9A8E',
-          fontSize: 14,
-          fontWeight: 700,
-          transition: 'all 80ms',
-          flexShrink: 0
+          transition: 'all 120ms ease',
+          fontSize: 16
         }}
       >
         ↑
       </button>
+      {SpeechRecognitionCtor && (
+        <button
+          onClick={toggleVoice}
+          title="push to talk"
+          disabled={disabled}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 'var(--radius-full)',
+            background: listening ? 'var(--color-amber-soft)' : 'var(--color-surface-raised)',
+            border: `1px solid ${listening ? 'var(--color-amber)' : 'var(--color-border)'}`,
+            color: disabled && !listening ? 'var(--color-text-3)' : 'var(--color-text-primary)',
+            cursor: disabled ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: listening ? 'pulse 0.8s ease-in-out infinite' : 'none'
+          }}
+        >
+          🎙
+        </button>
+      )}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
+        }
+      `}</style>
     </div>
-  )
+  );
 }

@@ -1,70 +1,72 @@
-import { ipcMain } from 'electron'
+import type { IpcMain } from 'electron';
+import type Database from 'better-sqlite3';
+import { MemoryService } from '../services/MemoryService';
 import {
-  getCoreIdentity,
-  setCoreIdentity,
-  getEpisodes,
-  searchEpisodes,
   getMoodLog,
+  getTodayMood,
+  getSessions,
   getTranscripts,
-  upsertMoodLog,
-  insertEpisode
-} from '../../src/memory/MemoryStore'
+  getMemoryProvenance,
+  getMemorySummary,
+  deleteMemoryProvenance
+} from '../db/queries';
 
-const VALID_MOODS = new Set(['happy', 'stressed', 'tired', 'neutral', 'excited'])
-const MAX_STRING_LENGTH = 2000
+type Deps = { memory: MemoryService; db: Database.Database };
 
-export function registerMemoryHandlers(): void {
-  ipcMain.handle('memory:get-core-identity', () => getCoreIdentity())
+export function registerMemoryHandlers(ipcMain: IpcMain, deps: Deps) {
+  const { memory, db } = deps;
 
-  ipcMain.handle('memory:set-core-identity', (_e, data) => {
-    if (!data || typeof data !== 'object') return false
-    setCoreIdentity(data)
-    return true
-  })
+  ipcMain.handle('memory:getProfile', async () => {
+    const { profile } = await memory.profile('');
+    return profile;
+  });
 
-  ipcMain.handle('memory:get-episodes', (_e, limit = 50) => {
-    const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 1000))
-    return getEpisodes(safeLimit)
-  })
+  ipcMain.handle('memory:search', async (_e, query: string) => {
+    return memory.listAll().then((all) =>
+      query ? all.filter((m) => m.content.toLowerCase().includes(query.toLowerCase())) : all
+    );
+  });
 
-  ipcMain.handle('memory:search-episodes', (_e, query: string) => {
-    if (typeof query !== 'string') return []
-    return searchEpisodes(query.slice(0, 500))
-  })
+  ipcMain.handle('memory:delete', async (_e, id: string) => {
+    await memory.delete(id);
+    // Clean up any provenance tracking for this memory
+    deleteMemoryProvenance(db, id);
+    return true;
+  });
 
-  ipcMain.handle('memory:get-mood-log', (_e, days = 30) => {
-    const safeDays = Math.max(1, Math.min(Number(days) || 30, 365))
-    return getMoodLog(safeDays)
-  })
+  ipcMain.handle('memory:clearAll', async () => {
+    await memory.clearAll();
+    // Wipe all provenance records too — clean slate
+    db.prepare('DELETE FROM memory_interactions').run();
+    return true;
+  });
 
-  ipcMain.handle('memory:get-transcripts', (_e, episodeId: number) => {
-    const id = Number(episodeId)
-    if (!Number.isInteger(id) || id < 1) return []
-    return getTranscripts(id)
-  })
+  // ─── Provenance Handlers ────────────────────────────────────────────────────
 
-  // Called from renderer after each conversation turn
-  ipcMain.handle('memory:observe-turn', (_e, date: string, signal: string, source: string) => {
-    if (typeof signal !== 'string' || !VALID_MOODS.has(signal)) return false
-    const safeSource = typeof source === 'string' ? source.slice(0, 200) : ''
-    upsertMoodLog(signal, safeSource)
-    return true
-  })
+  /**
+   * Returns provenance data for a single memory ID.
+   * Used by the ProvenanceSheet (single-delete confirmation) to show how many
+   * times this specific memory has shaped fumii's responses.
+   */
+  ipcMain.handle('memory:getProvenance', async (_e, id: string) => {
+    return getMemoryProvenance(db, id);
+  });
 
-  // Called from renderer after session ends and LLM summarization completes
-  ipcMain.handle(
-    'memory:save-episode',
-    (_e, summary: string, tags: string, mood: string, turnCount: number) => {
-      if (typeof summary !== 'string' || !summary.trim()) return false
-      const safeSummary = summary.slice(0, MAX_STRING_LENGTH)
-      const safeTags = typeof tags === 'string' ? tags.slice(0, 500) : ''
-      const safeMood = typeof mood === 'string' && VALID_MOODS.has(mood) ? mood : 'neutral'
-      const safeTurns = Math.max(0, Math.min(Number(turnCount) || 0, 10000))
-      insertEpisode(safeSummary, safeTags, safeMood, safeTurns)
-      return true
-    }
-  )
+  /**
+   * Returns an aggregate summary across ALL memories.
+   * Used by the ProvenanceAuditModal (clear-all confirmation) to give the user
+   * a full picture of what they're about to erase.
+   */
+  ipcMain.handle('memory:getSummary', async () => {
+    const all = await memory.listAll();
+    return getMemorySummary(db, all);
+  });
 
-  // clear-all is handled in main.ts (needs dialog) — handler is registered there
+  // ─── Mood / Sessions / Transcripts ─────────────────────────────────────────
+
+  ipcMain.handle('mood:getLog', async (_e, days: number) => getMoodLog(db, days));
+  ipcMain.handle('mood:getToday', async () => getTodayMood(db));
+
+  ipcMain.handle('sessions:list', async (_e, limit: number) => getSessions(db, limit));
+  ipcMain.handle('sessions:transcripts', async (_e, sessionId: number) => getTranscripts(db, sessionId));
 }
-

@@ -1,131 +1,116 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Sidebar } from './Sidebar'
-import { Home } from './pages/Home'
-import { Memory } from './pages/Memory'
-import { MoodTimeline } from './pages/MoodTimeline'
-import { Conversations } from './pages/Conversations'
-import { Settings } from './pages/Settings'
-import { useSettingsStore } from '../store/settingsStore'
-
-export type Page = 'home' | 'memory' | 'mood' | 'conversations' | 'settings'
+import React, { useState } from 'react';
+import { Sidebar } from './Sidebar';
+import { Home } from './pages/Home';
+import { Memory } from './pages/Memory';
+import { MoodTimeline } from './pages/MoodTimeline';
+import { Conversations } from './pages/Conversations';
+import { Device } from './pages/Device';
+import { Pets } from './pages/Pets';
+import { Settings } from './pages/Settings';
+import { SystemTest } from './pages/SystemTest';
+import '../styles/dashboard.css';
 
 export function DashboardApp() {
-  const [page, setPage] = useState<Page>('home')
-  const [pageKey, setPageKey] = useState(0)
-  const { load }        = useSettingsStore()
-
-  useEffect(() => {
-    load()
-
-    // Listen for navigation events pushed from main (e.g. tray → Settings)
-    window.fumiiAPI?.on('navigate', (...args: unknown[]) => {
-      const path = args[0]
-      if (path === '/settings') handleNavigate('settings')
-    })
-
-    // Re-load data after memory clear
-    window.fumiiAPI?.on('memory:cleared', () => {
-      handleNavigate('home')
-    })
-  }, [])
-
-  const handleNavigate = (p: Page) => {
-    setPage(p)
-    setPageKey(k => k + 1)  // force re-mount for animation
-  }
-
-  const renderPage = () => {
-    switch (page) {
-      case 'home':          return <Home onNavigate={handleNavigate} />
-      case 'memory':        return <Memory />
-      case 'mood':          return <MoodTimeline />
-      case 'conversations': return <Conversations />
-      case 'settings':      return <Settings />
-      default:              return <Home onNavigate={handleNavigate} />
-    }
-  }
+  const [page, setPage] = useState('home');
 
   return (
-    <div style={{
-      display:    'flex',
-      height:     '100vh',
-      background: 'var(--color-bg)',
-      color:      'var(--color-text-primary)',
-      fontFamily: 'var(--font-display)',
-      overflow:   'hidden'
-    }}>
-
-      {/* Custom frameless title bar */}
+    <div
+      style={{
+        display: 'flex',
+        height: '100vh',
+        background: 'var(--color-bg)',
+        color: 'var(--color-text-primary)',
+        overflow: 'hidden',
+        userSelect: 'none',
+        position: 'relative'
+      }}
+    >
+      {/* Top window controls and drag header bar (single bar, integrated seamlessly) */}
       <div
-        className="drag-region"
         style={{
-          position:   'fixed',
-          top: 0, left: 0, right: 0,
-          height:     38,
-          background: 'var(--color-bg)',
-          display:    'flex',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 36,
+          display: 'flex',
+          justifyContent: 'flex-end',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding:    '0 16px',
-          zIndex:     200,
-          borderBottom: '1px solid var(--color-border)'
-        }}
+          padding: '0 12px',
+          zIndex: 100,
+          WebkitAppRegion: 'drag'
+        } as React.CSSProperties}
       >
-        <span style={{
-          fontFamily:    'var(--font-display)',
-          fontSize:       13,
-          fontWeight:     700,
-          color:          'var(--color-primary)',
-          letterSpacing: '-0.02em'
-        }}>fumii</span>
-
-        {/* Window controls — macOS-style dots */}
-        <div className="no-drag" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {([
-            { color: '#FDBC40', action: 'minimize' },
-            { color: '#34C749', action: 'maximize' },
-            { color: '#FC5753', action: 'close' }
-          ] as const).map(({ color, action }) => (
-            <button
-              key={action}
-              onClick={() => {
-                if (action === 'minimize') window.fumiiAPI.window.minimize()
-                else if (action === 'maximize') window.fumiiAPI.window.maximize()
-                else window.fumiiAPI.window.close()
-              }}
-              style={{
-                width:        12,
-                height:       12,
-                borderRadius: '50%',
-                background:   color,
-                border:       'none',
-                cursor:       'pointer',
-                padding:      0,
-                transition:   'opacity 150ms, transform 150ms'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.transform = 'scale(1.15)' }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
-            />
-          ))}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            WebkitAppRegion: 'no-drag'
+          } as React.CSSProperties}
+        >
+          <button
+            onClick={() => window.fumii?.minimizeDashboard?.()}
+            style={ctrlBtn}
+            title="Minimize"
+          >
+            –
+          </button>
+          <button
+            onClick={() => window.fumii?.maximizeDashboard?.()}
+            style={ctrlBtn}
+            title="Maximize"
+          >
+            ▢
+          </button>
+          <button
+            onClick={() => window.fumii?.closeDashboard?.()}
+            style={{ ...ctrlBtn, color: 'var(--color-text-secondary)' }}
+            title="Close"
+          >
+            ×
+          </button>
         </div>
       </div>
 
-      {/* Main content area below titlebar */}
-      <div style={{ display: 'flex', flex: 1, paddingTop: 38 }}>
-        <Sidebar currentPage={page} onNavigate={handleNavigate} />
-        <main style={{
-          flex:          1,
-          overflow:      'auto',
-          padding:       '36px 44px',
-          scrollbarWidth:'thin',
-          scrollbarColor: 'var(--color-surface-raised) transparent'
-        }}>
-          {/* Page transition wrapper */}
-          <div key={pageKey} className="page-enter">
-            {renderPage()}
-          </div>
-        </main>
+      {/* Sidebar */}
+      <Sidebar active={page} onSelect={setPage} />
+
+      {/* Main Page Area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '36px 48px 48px 48px',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'var(--color-border) transparent'
+        }}
+      >
+        {page === 'home'          && <Home key="home" onNavigate={setPage} />}
+        {page === 'memory'        && <Memory key="memory" />}
+        {page === 'mood'          && <MoodTimeline key="mood" />}
+        {page === 'conversations' && <Conversations key="conversations" />}
+        {page === 'device'        && <Device key="device" />}
+        {page === 'pets'          && <Pets key="pets" />}
+        {page === 'settings'      && <Settings key="settings" />}
+        {page === 'system-test'   && <SystemTest key="system-test" />}
       </div>
     </div>
-  )
+  );
 }
+
+const ctrlBtn: React.CSSProperties = {
+  width: 24,
+  height: 24,
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--color-text-3)',
+  cursor: 'pointer',
+  borderRadius: 6,
+  fontSize: 13,
+  lineHeight: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'background 120ms ease, color 120ms ease'
+};

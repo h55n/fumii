@@ -1,127 +1,138 @@
-import React from 'react'
-import { ChatMessage } from '../store/chatStore'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import React, { useMemo } from 'react';
+import type { ChatMessage } from '../store/chatStore';
 
-interface ChatBubbleProps {
-  message: ChatMessage
+// marked + DOMPurify are the PRD-specified deps for safe markdown rendering.
+// Both are in package.json. If the dynamic require fails (bundling edge case),
+// we fall back to plain text — the app never breaks.
+let marked: ((text: string) => string) | null = null;
+let DOMPurify: { sanitize: (html: string) => string } | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const m = require('marked');
+  marked = m.marked ?? m.default ?? m;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const dmp = require('dompurify');
+  DOMPurify = dmp.default ?? dmp;
+} catch {
+  /* fallback to plain text */
 }
 
-// ── Markdown renderer ───────────────────────────────────────────────────
-// Uses marked (MIT) + DOMPurify for safe HTML output in fumii's assistant bubbles.
-
-// Configure marked once
-marked.setOptions({ breaks: true, gfm: true, async: false })
-
-function renderMarkdown(content: string): string {
+function renderMarkdown(text: string): string {
+  if (!marked || !DOMPurify) return text;
   try {
-    const html = marked.parse(content) as string
-    return DOMPurify.sanitize(html)
+    const html = (marked as (t: string) => string)(text);
+    return DOMPurify!.sanitize(html);
   } catch {
-    return content
+    return text;
   }
 }
 
-export function ChatBubble({ message }: ChatBubbleProps) {
-  const isUser = message.role === 'user'
+export function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user';
+  const isStreaming = message.streaming;
+
+  const html = useMemo(
+    () => (isUser ? null : renderMarkdown(message.content)),
+    [message.content, isUser]
+  );
 
   if (isUser) {
     return (
-      <div style={{
-        alignSelf:   'flex-end',
-        maxWidth:    '78%',
-        background:  'var(--color-surface-raised)',
-        color:       'var(--color-text-primary)',
-        borderRadius: '16px 16px 4px 16px',
-        padding:     '10px 14px',
-        fontFamily:  'var(--font-display)',
-        fontSize:    14,
-        lineHeight:  1.6,
-        animation:   'message-in 180ms ease-out'
-      }}>
+      <div
+        style={{
+          background: 'var(--color-surface-raised)',
+          color: 'var(--color-text-primary)',
+          borderRadius: '16px 16px 4px 16px',
+          padding: '10px 14px',
+          fontSize: 14,
+          lineHeight: 1.6,
+          maxWidth: '86%',
+          alignSelf: 'flex-end',
+          wordBreak: 'break-word'
+        }}
+      >
         {message.content}
       </div>
-    )
+    );
   }
-
-  // Assistant bubble — markdown rendered
-  const html = renderMarkdown(message.content || '')
 
   return (
     <div
-      className="chat-bubble chat-bubble--fumii"
       style={{
-        alignSelf:   'flex-start',
-        maxWidth:    '86%',
-        background:  'transparent',
-        color:       'var(--color-text-fumii)',
-        borderLeft:  '2px solid var(--color-amber)',
-        padding:     '8px 14px 8px 14px',
-        fontFamily:  'var(--font-display)',
-        fontSize:    14,
-        lineHeight:  1.75,
-        animation:   'message-in 180ms ease-out'
+        background: 'transparent',
+        color: 'var(--color-text-fumii)',
+        borderLeft: '2px solid var(--color-amber-line)',
+        padding: '10px 14px 10px 16px',
+        fontSize: 14,
+        lineHeight: 1.75,
+        maxWidth: '92%',
+        alignSelf: 'flex-start',
+        wordBreak: 'break-word'
       }}
     >
-      {html
-        ? <span dangerouslySetInnerHTML={{ __html: html }} />
-        : (message.content || '')
-      }
-      {message.streaming && (
-        <span style={{
-          display:       'inline-block',
-          width:         2,
-          height:        14,
-          background:    'var(--color-amber)',
-          marginLeft:    2,
-          animation:     'blink-cursor 0.7s steps(1) infinite',
-          verticalAlign: 'text-bottom'
-        }} />
+      {/* Markdown rendered */}
+      {html ? (
+        <div
+          dangerouslySetInnerHTML={{ __html: html }}
+          style={{ all: 'unset', display: 'block', lineHeight: 1.75, fontSize: 14, color: 'var(--color-text-fumii)' }}
+        />
+      ) : (
+        <span>{message.content}</span>
+      )}
+
+      {/* Streaming cursor */}
+      {isStreaming && (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 2,
+            height: '1em',
+            background: 'var(--color-amber)',
+            marginLeft: 2,
+            verticalAlign: 'text-bottom',
+            animation: 'cursor-blink 0.8s steps(1) infinite'
+          }}
+        />
       )}
 
       <style>{`
-        .chat-bubble--fumii code {
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+
+        /* Markdown overrides inside fumii bubbles */
+        [data-fumii-bubble] p  { margin: 0 0 8px; }
+        [data-fumii-bubble] p:last-child { margin: 0; }
+        [data-fumii-bubble] ul, [data-fumii-bubble] ol { margin: 4px 0 8px 18px; }
+        [data-fumii-bubble] li { margin-bottom: 3px; }
+        [data-fumii-bubble] code {
           font-family: var(--font-mono);
           font-size: 12px;
-          background: var(--color-amber-soft);
-          border: 1px solid rgba(245, 166, 35, 0.15);
-          border-radius: 4px;
-          padding: 1px 5px;
-          color: var(--color-amber);
-        }
-        .chat-bubble--fumii pre {
-          background: var(--color-bg);
+          background: var(--color-surface-raised);
           border: 1px solid var(--color-border);
-          border-radius: var(--radius-md);
-          padding: 10px 12px;
-          margin: 6px 0;
-          overflow-x: auto;
+          border-radius: 3px;
+          padding: 1px 5px;
         }
-        .chat-bubble--fumii pre code {
-          background: transparent;
+        [data-fumii-bubble] pre {
+          background: var(--color-surface-raised);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-sm);
+          padding: 10px 12px;
+          overflow-x: auto;
+          margin: 6px 0;
+        }
+        [data-fumii-bubble] pre code {
+          background: none;
           border: none;
           padding: 0;
           font-size: 12px;
-          color: var(--color-text-primary);
         }
-        .chat-bubble--fumii strong {
-          color: var(--color-text-primary);
-          font-weight: 600;
-        }
-        .chat-bubble--fumii p {
-          margin: 0 0 6px 0;
-        }
-        .chat-bubble--fumii p:last-child {
-          margin-bottom: 0;
-        }
-        .chat-bubble--fumii ul, .chat-bubble--fumii ol {
-          padding-left: 18px;
-          margin: 4px 0;
-        }
-        .chat-bubble--fumii li {
-          margin: 2px 0;
-        }
+        [data-fumii-bubble] strong { color: var(--color-amber); font-weight: 600; }
+        [data-fumii-bubble] em    { color: var(--color-text-secondary); font-style: italic; }
+        [data-fumii-bubble] a     { color: var(--color-blue); text-decoration: none; }
+        [data-fumii-bubble] a:hover { text-decoration: underline; }
       `}</style>
     </div>
-  )
+  );
 }

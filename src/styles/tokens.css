@@ -1,0 +1,104 @@
+:root {
+  /* Backgrounds — Warm Ivory & Cream Surfaces */
+  --color-bg: #FAFAF7;
+  --color-surface: #F1F1EB;
+  --color-surface-raised: #E8E8E0;
+  --color-surface-active: #EBF3FB;
+  --color-surface-hover: #ECECE5;
+
+  /* Brand — Electric Cobalt Blue */
+  --color-blue: #2563EB;
+  --color-blue-dark: #1D4ED8;
+  --color-blue-light: #3B82F6;
+  --color-blue-tint: #E0EEFA;
+  --color-blue-soft: #EBF3FB;
+  --color-blue-line: rgba(37, 99, 235, 0.2);
+
+  /* Warm Accent */
+  --color-amber: #2563EB;
+  --color-amber-soft: rgba(37, 99, 235, 0.08);
+  --color-amber-dim: rgba(37, 99, 235, 0.06);
+  --color-amber-line: rgba(37, 99, 235, 0.15);
+
+  /* Accents */
+  --color-green: #10B981;
+  --color-green-dim: rgba(16, 185, 129, 0.1);
+  --color-green-line: rgba(16, 185, 129, 0.2);
+  --color-teal: #0D9488;
+  --color-mist: #64748B;
+
+  /* Text — Deep Charcoal & Soft Slate (No harsh pure black) */
+  --color-text-primary: #1E2022;
+  --color-text-secondary: #6B7280;
+  --color-text-3: #888E99;
+  --color-text-muted: #9CA3AF;
+  --color-text-fumii: #2563EB;
+
+  /* Utility */
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-2: rgba(0, 0, 0, 0.12);
+  --color-danger: #EF4444;
+  --color-danger-dim: rgba(239, 68, 68, 0.08);
+
+  /* Glows */
+  --glow-blue: 0 4px 20px rgba(37, 99, 235, 0.15);
+  --glow-soft: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --glow-card: 0 1px 3px rgba(0, 0, 0, 0.03), 0 6px 16px rgba(0, 0, 0, 0.02);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+
+  /* Type */
+  --font-display: 'Space Grotesk', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'DM Mono', 'Departure Mono', 'Courier New', monospace;
+
+  /* Transitions */
+  --ease-out-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-smooth: cubic-bezier(0.7, 0, 0.84, 0);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 400ms;
+}
+
+*  {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-2);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

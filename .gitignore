@@ -1,30 +1,13 @@
 node_modules/
-dist/
-dist-electron/
-release/
-.env
-*.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-crash.log
-debug.log
-
-# Editor
-.vscode/settings.json
-.idea/
-
-# Build artifacts
 out/
-build/
+release/
+release-fixed/
+dist/
+.fumii-dev/
+*.log
 *.tsbuildinfo
+temp_extracted_asar/
+temp-*.mp4
+temp-*.webm
+.DS_Store
 
-# DB (local data, never committed)
-*.db
-*.db-shm
-*.db-wal

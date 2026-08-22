@@ -1,32 +1,41 @@
 {
   "name": "fumii",
-  "version": "1.0.5",
-  "description": "you're never really alone — a desktop AI companion",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/fumii/fumii.git"
-  },
+  "productName": "fumii",
+  "version": "1.0.0",
+  "description": "fumii — you're never really alone. Desktop companion app (Phase 1: software only).",
+  "author": "Hassan Rehman",
+  "main": "out/main/main.js",
   "private": true,
-  "author": "fumii contributors",
-  "license": "MIT",
-  "main": "dist/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:hardware": "cross-env ENABLE_HARDWARE=1 electron-vite dev",
+    "dev:full-stack": "cross-env ENABLE_HARDWARE=1 USE_REAL_SUPERMEMORY=1 USE_REAL_LITELLM=1 electron-vite dev",
     "build": "electron-vite build",
-    "dist": "node scripts/generate-icon.js && npm run build && electron-builder",
-    "generate-icon": "node scripts/generate-icon.js",
+    "build:win": "electron-vite build && electron-builder --win nsis dir && node scripts/patch-exe-metadata.js",
+    "build:mac": "electron-vite build && electron-builder --mac dmg zip",
+    "build:linux": "electron-vite build && electron-builder --linux AppImage deb",
+    "publish:win": "electron-vite build && electron-builder --win --publish always",
+    "publish:mac": "electron-vite build && electron-builder --mac --publish always",
+    "publish:linux": "electron-vite build && electron-builder --linux --publish always",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "node scripts/generate-placeholder-assets.js && npx @electron/rebuild -f -w better-sqlite3 -w keytar",
-    "check": "node scripts/check-env.js"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "postinstall": "node scripts/check-ollama.js || true"
   },
   "dependencies": {
+    "aedes": "^0.51.0",
     "better-sqlite3": "^9.4.3",
+    "chokidar": "^3.6.0",
     "dompurify": "^3.1.6",
+    "electron-updater": "^6.2.1",
     "keytar": "^7.9.0",
     "marked": "^12.0.0",
+    "mqtt": "^5.5.0",
+    "msedge-tts": "^2.0.7",
+    "node-fetch": "^3.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "uuid": "^9.0.1",
+    "ws": "^8.17.0",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
@@ -37,13 +46,15 @@
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.8",
+    "@types/ws": "^8.5.10",
     "@vitejs/plugin-react": "^4.3.0",
+    "cross-env": "^7.0.3",
     "electron": "^29.4.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
-    "sharp": "^0.35.1",
+    "rcedit": "^5.0.2",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0",
-    "vitest": "^4.1.9"
+    "vite": "^5.4.0"
   }
 }

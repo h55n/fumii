@@ -1,33 +1,32 @@
-import { create } from 'zustand'
-
-export type SpriteState =
-  | 'idle'
-  | 'listening'
-  | 'thinking'
-  | 'speaking'
-  | 'happy'
-  | 'concerned'
-  | 'sleepy'
-  | 'excited'
-  | 'waving'
-
-export type MoodSignal = 'happy' | 'stressed' | 'tired' | 'neutral' | 'excited'
+import { create } from 'zustand';
+import type { FumiiState, BehaviorMode } from '../sprite/EmotionState';
 
 interface AppState {
-  spriteState: SpriteState
-  currentMood: MoodSignal
-  lastInteractionTime: number
-  setSpriteState: (state: SpriteState) => void
-  setCurrentMood: (mood: MoodSignal) => void
-  updateInteractionTime: () => void
+  spriteState: FumiiState;
+  behaviorMode: BehaviorMode;
+  chatOpen: boolean;
+  mode: 'companion' | 'assistant';
+  setSpriteState: (s: FumiiState) => void;
+  setBehaviorMode: (b: BehaviorMode) => void;
+  setChatOpen: (open: boolean) => void;
+  setMode: (m: 'companion' | 'assistant') => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  spriteState: 'waving',
-  currentMood: 'neutral',
-  lastInteractionTime: Date.now(),
-
-  setSpriteState: (state) => set({ spriteState: state }),
-  setCurrentMood: (mood) => set({ currentMood: mood }),
-  updateInteractionTime: () => set({ lastInteractionTime: Date.now() })
-}))
+export const useAppStore = create<AppState>((set, get) => ({
+  spriteState: 'idle',
+  behaviorMode: 'wander',
+  chatOpen: false,
+  mode: 'companion',
+  setSpriteState: (spriteState) => {
+    if (get().spriteState === spriteState) return;
+    set({ spriteState });
+    window?.fumii?.setSpriteState?.(spriteState);
+  },
+  setBehaviorMode: (behaviorMode) => {
+    if (get().behaviorMode === behaviorMode) return;
+    set({ behaviorMode });
+    window?.fumii?.setSpriteBehavior?.(behaviorMode);
+  },
+  setChatOpen: (chatOpen) => set({ chatOpen }),
+  setMode: (mode) => set({ mode })
+}));

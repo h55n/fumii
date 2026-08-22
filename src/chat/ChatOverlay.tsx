@@ -1,277 +1,137 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { ChatHistory } from './ChatHistory'
-import { ChatInput } from './ChatInput'
-import { TypingIndicator } from './TypingIndicator'
-import { useChatStore } from '../store/chatStore'
-import { useAppStore } from '../store/appStore'
-import { useSettingsStore } from '../store/settingsStore'
-import { observeTurn, summarizeConversation } from '../memory/EpisodicLogger'
-import { detectEmotionFromResponse } from '../sprite/EmotionState'
-import { speak } from '../voice/TTS'
+import React, { useEffect, useState } from 'react';
+import { ChatHistory } from './ChatHistory';
+import { ChatInput } from './ChatInput';
+import { useChatStore } from '../store/chatStore';
+import { useAppStore } from '../store/appStore';
+import { detectStateFromResponse } from '../sprite/EmotionState';
+import { playSoothingTTS } from '../services/ttsService';
 
-interface ChatOverlayProps {
-  onClose: () => void
-}
-
-// Play a soft chime on response completion.
-function playComplete() {
+function speak(text: string) {
+  let voiceId: string | undefined;
+  let rate: string | undefined;
+  let pitch: string | undefined;
   try {
-    const audio = new Audio('./assets/sounds/complete.mp3')
-    audio.volume = 0.35
-    audio.play().catch(() => {})
+    const savedVoice = localStorage.getItem('fumii_tts_voice_id');
+    if (savedVoice) voiceId = savedVoice;
+    const savedRate = localStorage.getItem('fumii_tts_rate_val');
+    if (savedRate) rate = savedRate;
+    const savedPitch = localStorage.getItem('fumii_tts_pitch_val');
+    if (savedPitch) pitch = savedPitch;
   } catch {}
+
+  playSoothingTTS(text, { voiceId, rate, pitch });
 }
 
-export function ChatOverlay({ onClose }: ChatOverlayProps) {
-  const {
-    messages,
-    addMessage,
-    updateMessage,
-    finalizeMessage,
-    setStreaming,
-    isStreaming,
-    getHistoryForLLM,
-    clearMessages
-  } = useChatStore()
+export function ChatOverlay() {
+  const { addMessage, appendStreamToken, finishStream, setThinking, isThinking, messages } = useChatStore();
+  const { mode, setSpriteState } = useAppStore();
+  
+  const isStreaming = messages.some(m => m.streaming);
+  const disabled = isThinking || isStreaming;
 
-  const { setSpriteState } = useAppStore()
-  const { get } = useSettingsStore()
-  const inactivityTimer = useRef<ReturnType<typeof setTimeout>>()
-  const [visible, setVisible] = useState(false)
+  const handleSend = async (text: string) => {
+    addMessage({ role: 'user', content: text });
+    const assistantId = addMessage({ role: 'assistant', content: '', streaming: true });
+    setThinking(true);
+    setSpriteState('thinking');
 
-  const currentTheme = get('chat_theme') || 'midnight'
+    const history = useChatStore
+      .getState()
+      .messages.slice(-20)
+      .map((m) => ({ role: m.role, content: m.content }));
 
-  // Animate in
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setVisible(true))
-    return () => {
-      cancelAnimationFrame(raf)
-      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
-    }
-  }, [])
-
-  const resetInactivity = () => {
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
-    inactivityTimer.current = setTimeout(handleClose, 60_000) // 60s inactivity → auto-close
-  }
-
-  const handleClose = async () => {
-    setVisible(false)
-    setTimeout(onClose, 220)
-
-    const history = getHistoryForLLM()
-    if (history.length >= 6) {
-      try {
-        await summarizeConversation(
-          history.map(m => ({ ...m, role: m.role as 'user' | 'assistant' | 'system' })),
-          async (msgs) => window.fumiiAPI.llm.sendMessage(msgs as any, {})
-        )
-      } catch { /* non-fatal */ }
-    }
-  }
-
-  const handleSend = async (userText: string) => {
-    if (!userText.trim() || isStreaming) return
-    resetInactivity()
-    setSpriteState('thinking')
-    setStreaming(true)
-
-    addMessage('user', userText)
-
-    // Placeholder assistant message (will be filled by streaming)
-    const assistantId = addMessage('assistant', '')
-
-    const history = getHistoryForLLM().slice(0, -1) // exclude the user msg we just added
-
-    let fullResponse = ''
-
-    try {
-      await window.fumiiAPI.llm.streamMessage(
-        [...history, { role: 'user', content: userText }],
-        {},
-        (chunk: string | null) => {
-          if (chunk === null) return
-          fullResponse += chunk
-          updateMessage(assistantId, chunk)
-          setSpriteState(detectEmotionFromResponse(fullResponse))
-        }
-      )
-
-      finalizeMessage(assistantId)
-
-      // Completion chime
-      if (get('completion_chime') !== 'false') {
-        playComplete()
+    window.fumii.streamMessage(
+      history as any,
+      (token) => {
+        setThinking(false);
+        setSpriteState('speaking');
+        appendStreamToken(assistantId, token);
+      },
+      (full) => {
+        finishStream(assistantId, full);
+        setSpriteState(detectStateFromResponse(full));
+        speak(full);
+        setTimeout(() => setSpriteState('idle'), 4000);
+      },
+      (err) => {
+        finishStream(assistantId, "hmm, i'm having trouble right now — try again in a sec?");
+        setSpriteState('concerned');
+        console.error('llm stream error', err);
       }
-
-      // TTS
-      if (get('tts_enabled') === 'true' && fullResponse) {
-        speak(fullResponse)
-      }
-
-      observeTurn(userText, fullResponse)
-
-    } catch (err) {
-      finalizeMessage(assistantId)
-      const errMsg = err instanceof Error ? err.message : String(err)
-      let userMessage = 'something went wrong — check your API key in settings'
-      if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized')) {
-        userMessage = 'invalid or missing API key — check settings'
-      } else if (errMsg.includes('timeout') || errMsg.includes('timed out')) {
-        userMessage = 'response timed out — try again or switch to a different model'
-      } else if (errMsg.includes('already in progress')) {
-        userMessage = 'still processing the last message — please wait'
-      } else if (errMsg.includes('ECONNREFUSED') || errMsg.includes('fetch failed')) {
-        userMessage = 'can\'t reach the LLM server — check your connection or if Ollama is running'
-      }
-      if (!fullResponse) {
-        updateMessage(assistantId, userMessage)
-      }
-      setSpriteState('concerned')
-    } finally {
-      setStreaming(false)
-      setSpriteState('idle')
-    }
-  }
+    );
+  };
 
   return (
     <div
-      className="chat-overlay"
-      data-theme={currentTheme}
       style={{
-        width:              360,
-        height:             460,
-        background:         'var(--color-surface, rgba(26, 26, 36, 0.92))',
-        backdropFilter:     'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border:             '1px solid var(--color-border, rgba(255,255,255,0.06))',
-        borderRadius:       'var(--radius-lg, 20px) var(--radius-lg, 20px) var(--radius-md, 12px) var(--radius-md, 12px)',
-        boxShadow:          '0 -4px 40px rgba(0,0,0,0.5), var(--glow-amber)',
-        display:            'flex',
-        flexDirection:      'column',
-        overflow:           'hidden',
-        transform:          visible ? 'translateY(0)' : 'translateY(20px)',
-        opacity:            visible ? 1 : 0,
-        transition:         'transform 220ms cubic-bezier(0.16,1,0.3,1), opacity 220ms ease-out',
-        userSelect:         'none'
+        position: 'absolute',
+        bottom: 220,
+        left: 8,
+        right: 8,
+        height: 480,
+        background: 'rgba(250, 250, 247, 0.96)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        borderRadius: '22px',
+        boxShadow: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        animation: 'chat-in 220ms var(--ease-out-smooth)'
       }}
     >
-      {/* Header */}
-      <div style={{
-        padding:       '12px 16px 10px',
-        display:       'flex',
-        alignItems:    'center',
-        justifyContent:'space-between',
-        borderBottom:  '1px solid var(--color-border, rgba(255,255,255,0.04))',
-        WebkitAppRegion: 'no-drag' as any
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            fontFamily:    'var(--font-display)',
-            fontSize:       13,
-            fontWeight:     600,
-            color:          'var(--color-text-fumii)',
-            letterSpacing: '-0.01em'
-          }}>fumii</span>
-          <div style={{
-            width:      6,
-            height:     6,
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '14px 18px',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+        }}
+      >
+        <span
+          style={{
+            width: 6,
+            height: 6,
             borderRadius: '50%',
-            background: isStreaming ? 'var(--color-amber)' : 'var(--color-green)',
-            animation:  isStreaming ? 'pulse 0.9s ease-in-out infinite' : 'none'
-          }} />
-          <span style={{
-            fontFamily: 'var(--font-display)',
-            fontSize:    11,
-            color:       'var(--color-text-secondary)'
-          }}>{isStreaming ? 'thinking...' : 'here'}</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => {
-              if (confirm('Clear the current conversation?')) {
-                clearMessages()
-              }
-            }}
-            title="Clear Chat"
-            style={{
-              background: 'none',
-              border:     'none',
-              color:      'var(--color-text-secondary)',
-              cursor:     'pointer',
-              fontSize:   14,
-              lineHeight: 1,
-              padding:    '2px 6px',
-              borderRadius: 4,
-              fontFamily: 'var(--font-display)',
-              transition: 'color 150ms'
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
-          >⟳</button>
-          <button
-            onClick={handleClose}
-            style={{
-              background: 'none',
-              border:     'none',
-              color:      'var(--color-text-secondary)',
-              cursor:     'pointer',
-              fontSize:   18,
-              lineHeight: 1,
-              padding:    '2px 6px',
-              borderRadius: 4,
-              fontFamily: 'var(--font-display)',
-              transition: 'color 150ms'
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
-          >×</button>
-        </div>
+            background: 'var(--color-blue)'
+          }}
+        />
+        <span style={{ color: 'var(--color-blue)', fontWeight: 700, fontSize: 14 }}>fumii</span>
+        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {mode}
+        </span>
+        <button
+          onClick={() => window.fumii?.closeChat?.()}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--color-text-3)',
+            cursor: 'pointer',
+            fontSize: 18,
+            marginLeft: 12,
+            padding: '0 4px',
+            lineHeight: 1,
+            transition: 'color 120ms ease'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-3)')}
+          title="Close chat"
+        >
+          ×
+        </button>
       </div>
 
-      {/* Messages */}
-      <ChatHistory messages={messages} />
-
-      {/* Typing indicator */}
-      {isStreaming && <TypingIndicator />}
-
-      {/* Input */}
-      <ChatInput
-        onSend={handleSend}
-        disabled={isStreaming}
-        onActivity={resetInactivity}
-        voiceEnabled={get('voice_enabled') === 'true'}
-      />
+      <ChatHistory />
+      <ChatInput onSend={handleSend} disabled={disabled} />
 
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.4; transform: scale(0.75); }
-        }
-
-        /* ── Chat themes (lil-agents popover themes port) ── */
-        [data-theme="moss"] {
-          --color-surface:    #141C14;
-          --color-text-fumii: #CAFFA6;
-          --color-amber:      #CAFFA6;
-          --color-amber-soft: rgba(202, 255, 166, 0.10);
-          --glow-amber: 0 0 20px rgba(202, 255, 166, 0.2), 0 0 60px rgba(202, 255, 166, 0.06);
-        }
-        [data-theme="peach"] {
-          --color-surface:    #1E1614;
-          --color-text-fumii: #F5A06A;
-          --color-amber:      #F5A06A;
-          --color-amber-soft: rgba(245, 160, 106, 0.12);
-          --glow-amber: 0 0 20px rgba(245, 160, 106, 0.2), 0 0 60px rgba(245, 160, 106, 0.06);
-        }
-        [data-theme="cloud"] {
-          --color-surface:    #14161E;
-          --color-text-fumii: #A9C8F1;
-          --color-amber:      #A9C8F1;
-          --color-amber-soft: rgba(169, 200, 241, 0.10);
-          --glow-amber: 0 0 20px rgba(169, 200, 241, 0.2), 0 0 60px rgba(169, 200, 241, 0.06);
+        @keyframes chat-in {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: none; }
         }
       `}</style>
     </div>
-  )
+  );
 }

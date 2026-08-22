@@ -1,69 +1,127 @@
-/**
- * TypeScript declarations for the fumii preload bridge.
- * window.fumiiAPI is injected by electron/preload.ts via contextBridge.
- */
-export {}
+export type Message = { role: 'user' | 'assistant' | 'system'; content: string };
 
-import type { CoreIdentity, Episode, MoodLog, Transcript } from './memory/types'
+export type MoodSignal = 'stressed' | 'happy' | 'tired' | 'neutral' | 'excited';
+export type MoodEntry = { id: number; date: string; signal: MoodSignal; source: string };
+export type Session = {
+  id: number;
+  started_at: string;
+  ended_at: string | null;
+  mode: 'companion' | 'assistant';
+  turn_count: number;
+};
+export type Transcript = { id: number; session_id: number; role: 'user' | 'assistant'; content: string; created_at: string };
+export type Pet = { slug: string; name: string; spritesheetPath?: string; previewUrl?: string; spritesheetUrl?: string; isDefault: boolean; description?: string; author?: string; tags?: string[] };
+export type MemoryResult = { id: string; content: string; createdAt: string; tags: string[] };
+export type PairingStatus = 'none-found' | 'found-unpaired' | 'pairing' | 'paired' | 'paired-offline';
+
+export type DeviceStatus = {
+  connected: boolean;
+  battery: number | null;
+  wifi: string | null;
+  wifiRssi?: number | null;
+  lastSeen: string | null;
+  mode: 'companion' | 'assistant';
+  pairingStatus?: PairingStatus;
+  firmwareVersion?: string;
+  ip?: string;
+  apSsid?: string;  // AP SSID broadcast during provisioning (fumii-setup-XXXX)
+};
+
+export interface WhisperModelInfo {
+  id: string;
+  label: string;
+  filename: string;
+  sizeMB: number;
+  description: string;
+  installed: boolean;
+  isActive?: boolean;
+  accuracy: number;
+  speed: number;
+  language: 'en' | 'multi';
+  badge?: string;
+}
+
+export interface FumiiAPI {
+  streamMessage: (
+    messages: Message[],
+    onToken: (token: string) => void,
+    onDone: (full: string) => void,
+    onError: (err: string) => void
+  ) => () => void;
+
+  getProfile: () => Promise<{ static: string[]; dynamic: string[] }>;
+  searchMemories: (query: string) => Promise<MemoryResult[]>;
+  deleteMemory: (id: string) => Promise<void>;
+  clearAllMemories: () => Promise<boolean>;
+  getMemoryProvenance: (id: string) => Promise<{ memoryId: string; citeCount: number; firstCited: string | null; lastCited: string | null } | null>;
+  getMemorySummary: () => Promise<{ totalCount: number; oldestDate: string | null; newestDate: string | null; daysCovered: number; topTags: string[]; totalCitations: number }>;
+
+  getMoodLog: (days: number) => Promise<MoodEntry[]>;
+  getTodayMood: () => Promise<MoodEntry | null>;
+
+  getSessions: (limit: number) => Promise<Session[]>;
+  getTranscripts: (sessionId: number) => Promise<Transcript[]>;
+
+  getAllSettings: () => Promise<Record<string, string>>;
+  getSetting: (key: string) => Promise<string | null>;
+  setSetting: (key: string, value: string) => Promise<void>;
+  setApiKey: (provider: string, key: string) => Promise<void>;
+  hasApiKey: (provider: string) => Promise<boolean>;
+  testConnection: (provider: string) => Promise<{ ok: boolean; response?: string; error?: string }>;
+
+  getMode: () => Promise<'companion' | 'assistant'>;
+  setMode: (mode: 'companion' | 'assistant') => Promise<void>;
+
+  getDeviceStatus: () => Promise<DeviceStatus>;
+  getPairingStatus: () => Promise<PairingStatus>;
+  pairDevice: () => Promise<boolean>;
+  unpairDevice: () => Promise<boolean>;
+  setDeviceMode: (mode: 'companion' | 'assistant') => Promise<void>;
+  sendLEDCommand: (color: string, pattern: string) => Promise<void>;
+  identifyDevice: () => Promise<void>;
+  restartDevice: () => Promise<void>;
+
+  getInstalledPets: () => Promise<Pet[]>;
+  getPetRegistry: () => Promise<Pet[]>;
+  fetchCodexLibrary: (params: any) => Promise<any>;
+  getActivePet: () => Promise<Pet>;
+  setActivePet: (slug: string) => Promise<void>;
+  installPet: (petData: any) => Promise<any>;
+  installCustomPet: (slugOrUrl: string) => Promise<any>;
+  downloadAndInstallPet: (petIdentifierOrData: any) => Promise<any>;
+  removeInstalledPet: (slug: string) => Promise<void>;
+
+  // Whisper STT model management
+  getWhisperModels: () => Promise<WhisperModelInfo[]>;
+  downloadWhisperModel: (modelId: string) => Promise<{ ok: boolean }>;
+  cancelWhisperDownload: (modelId: string) => Promise<boolean>;
+  deleteWhisperModel: (modelId: string) => Promise<boolean>;
+  isWhisperAvailable: (modelId?: string) => Promise<boolean>;
+
+  showSprite: () => void;
+  hideSprite: () => void;
+  openChat: () => void;
+  closeChat: () => void;
+  openDashboard: () => void;
+  minimizeDashboard: () => void;
+  maximizeDashboard: () => void;
+  closeDashboard: () => void;
+  setInteractive: (interactive: boolean) => void;
+  setSpriteState: (state: string) => void;
+  setSpriteBehavior: (behavior: string) => void;
+  moveSpriteWindow: (dx: number, dy: number) => void;
+  setSpritePosition: (x: number, y: number) => void;
+  runSystemTests: () => Promise<any>;
+
+  // Microsoft Neural TTS
+  synthesizeTTS: (text: string, options?: { voice?: string; pitch?: string; rate?: string; volume?: string }) => Promise<string | null>;
+  getEdgeVoices: () => Promise<Array<{ id: string; name: string; gender: string; locale: string; description: string; isSoothing: boolean }>>;
+
+  on: (channel: string, handler: (...args: any[]) => void) => () => void;
+}
 
 declare global {
   interface Window {
-    fumiiAPI: {
-      sprite: {
-        setMouseEvents: (enabled: boolean) => void
-        toggleChat:     (open: boolean)    => void
-        sleep:          ()                 => void
-        wake:           ()                 => void
-      }
-      dashboard: {
-        open: () => void
-      }
-      window: {
-        minimize: () => void
-        maximize: () => void
-        close:    () => void
-      }
-      memory: {
-        getCoreIdentity:  ()                      => Promise<CoreIdentity | null>
-        setCoreIdentity:  (data: Partial<CoreIdentity>) => Promise<void>
-        getEpisodes:      (limit?: number)        => Promise<Episode[]>
-        searchEpisodes:   (query: string)         => Promise<Episode[]>
-        getMoodLog:       (days?: number)         => Promise<MoodLog[]>
-        clearAll:         ()                      => Promise<boolean>
-        getTranscripts:   (episodeId: number)     => Promise<Transcript[]>
-        observeTurn:      (date: string, signal: string, source: string) => Promise<void>
-        saveEpisode:      (summary: string, tags: string, mood: string, turns: number) => Promise<void>
-      }
-      llm: {
-        sendMessage: (
-          messages: Array<{ role: string; content: string }>,
-          config: Record<string, unknown>
-        ) => Promise<string>
-        streamMessage: (
-          messages: Array<{ role: string; content: string }>,
-          config: Record<string, unknown>,
-          onChunk: (chunk: string | null) => void
-        ) => Promise<string>
-        getProviders: () => Promise<Array<{ id: string; name: string; defaultModel: string }>>
-      }
-      settings: {
-        get:       (key: string)                => Promise<string | null>
-        set:       (key: string, value: string) => Promise<boolean>
-        getAll:    ()                           => Promise<Record<string, string>>
-        getApiKey: (provider: string)           => Promise<string>
-        setApiKey: (provider: string, key: string) => Promise<boolean>
-        detectClaudeCode: () => Promise<{ found: boolean; path: string | null }>
-      }
-      on:  (channel: string, callback: (...args: unknown[]) => void) => void
-      off: (channel: string, callback?: (...args: unknown[]) => void) => void
-
-      // Safe external URL opening
-      openExternal: (url: string) => Promise<boolean>
-    }
-
-    // Internal helpers wired by preload for EpisodicLogger (renderer-safe)
-    __fumiiObserveTurn: (date: string, signal: string, source: string) => void
-    __fumiiSaveEpisode: (summary: string, tags: string, mood: string, turns: number) => void
+    fumii: FumiiAPI;
   }
 }
-

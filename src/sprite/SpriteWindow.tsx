@@ -1,156 +1,215 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react'
-import { FumiiSprite, WalkDirection } from './FumiiSprite'
-import { ThinkingBubble } from './ThinkingBubble'
-import { ChatOverlay } from '../chat/ChatOverlay'
-import { ErrorBoundary } from '../chat/ErrorBoundary'
-import { useAppStore } from '../store/appStore'
-import { useChatStore } from '../store/chatStore'
-import { useSettingsStore } from '../store/settingsStore'
-import { checkSleepState } from './EmotionState'
+import React, { useEffect, useState, useRef } from 'react';
+import { SceneBackground } from './SceneBackground';
+import { PetWidget } from '../pet/PetWidget';
+import { ChatOverlay } from '../chat/ChatOverlay';
+import { useAppStore } from '../store/appStore';
+import { usePetStore, type Pet } from '../store/petStore';
+import type { FumiiState, BehaviorMode } from './EmotionState';
 
 export function SpriteWindow() {
-  const { spriteState, setSpriteState, lastInteractionTime, updateInteractionTime } = useAppStore()
-  const { isOpen, setOpen } = useChatStore()
-  const { load: loadSettings, get } = useSettingsStore()
-  const [walkDirection, setWalkDirection] = useState<WalkDirection>('idle')
+  const { spriteState, setSpriteState, setBehaviorMode, chatOpen, setChatOpen } = useAppStore();
+  const { activePet, load } = usePetStore();
 
-  // Ref to avoid stale closures in event listeners
-  const isOpenRef = useRef(isOpen)
-  useEffect(() => { isOpenRef.current = isOpen }, [isOpen])
+  // Horizontal position of the companion (percentage: 20% to 80%)
+  const [posX] = useState(50);
+  const posXRef = useRef(50);
+  const [clickReaction, setClickReaction] = useState(false);
 
   useEffect(() => {
-    loadSettings()
+    load();
 
-    // Wave once on startup, then settle to idle
-    const waveTimer = setTimeout(() => setSpriteState('idle'), 3500)
-
-    return () => clearTimeout(waveTimer)
-  }, [])
-
-  // Listen for walk direction from main process wander system
-  useEffect(() => {
-    const handler = (dir: unknown) => {
-      setWalkDirection(dir as WalkDirection)
-    }
-    window.fumiiAPI?.on('sprite:walk-direction', handler)
-    return () => { window.fumiiAPI?.off('sprite:walk-direction', handler) }
-  }, [])
-
-  // Global hotkey from main process (Ctrl+Shift+F)
-  useEffect(() => {
-    const handler = () => handleToggleChat(!isOpenRef.current)
-    window.fumiiAPI?.on('hotkey:toggle-chat', handler)
-    return () => { window.fumiiAPI?.off('hotkey:toggle-chat', handler) }
-  }, []) // eslint-disable-line
-
-  // Idle → sleepy after 2 hours
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!isOpenRef.current && checkSleepState(lastInteractionTime)) {
-        setSpriteState('sleepy')
+    // Listen to IPC events from main & dashboard without creating echo loops
+    const offToggle = window?.fumii?.on?.('chat:toggled', (open: boolean) => setChatOpen(open));
+    const offState = window?.fumii?.on?.('sprite:stateChanged', (st: FumiiState) => {
+      if (useAppStore.getState().spriteState !== st) {
+        useAppStore.setState({ spriteState: st });
       }
-    }, 60_000)
-    return () => clearInterval(id)
-  }, [lastInteractionTime])
+    });
+    const offBehavior = window?.fumii?.on?.('sprite:behaviorChanged', (bm: BehaviorMode) => {
+      if (useAppStore.getState().behaviorMode !== bm) {
+        useAppStore.setState({ behaviorMode: bm });
+      }
+    });
+    const offActive = window?.fumii?.on?.('pet:activeChanged', (p: Pet) => {
+      if (p) usePetStore.setState({ activePet: p });
+    });
+    const offUpdated = window?.fumii?.on?.('pet:updated', () => {
+      load();
+    });
 
-  // Memory cleared notification
+    return () => {
+      if (typeof offToggle === 'function') offToggle();
+      if (typeof offState === 'function') offState();
+      if (typeof offBehavior === 'function') offBehavior();
+      if (typeof offActive === 'function') offActive();
+      if (typeof offUpdated === 'function') offUpdated();
+    };
+  }, []);
+
+  // Update ref when state changes
   useEffect(() => {
-    const handler = () => {
-      setSpriteState('waving')
-      setTimeout(() => setSpriteState('idle'), 3000)
-    }
-    window.fumiiAPI?.on('memory:cleared', handler)
-    return () => { window.fumiiAPI?.off('memory:cleared', handler) }
-  }, [])
+    posXRef.current = posX;
+  }, [posX]);
 
-  const handleToggleChat = useCallback((open: boolean) => {
-    setOpen(open)
-    window.fumiiAPI?.sprite.toggleChat(open)
-    updateInteractionTime()
-    setSpriteState(open ? 'listening' : 'idle')
-    // NOTE: we do NOT clear messages on close — conversation persists within a session.
-    // Messages are cleared only via the explicit "clear chat" button in ChatOverlay,
-    // or when the main process fires 'memory:cleared'.
-  }, [setOpen, updateInteractionTime, setSpriteState])
+  const clickLockRef = useRef(false);
+
+  // 4-5 Minute Mood & Memory Emotional Cadence Loop
+  useEffect(() => {
+    const syncMoodEmotion = async () => {
+      try {
+        if (clickLockRef.current || useAppStore.getState().chatOpen) return;
+        const moodLog = await window?.fumii?.getMoodLog?.(1);
+        const latestMood = moodLog?.[0]?.signal || 'neutral';
+
+        let targetState: FumiiState = 'idle';
+        if (latestMood === 'happy' || latestMood === 'excited') {
+          targetState = Math.random() > 0.5 ? 'happy' : 'idle';
+        } else if (latestMood === 'tired' || latestMood === 'stressed') {
+          targetState = 'sleepy';
+        } else {
+          targetState = 'idle';
+        }
+
+        setSpriteState(targetState);
+      } catch {}
+    };
+
+    // Initial mood sync on startup
+    syncMoodEmotion();
+
+    // Check cadence every 4.5 minutes (270,000 ms)
+    const interval = setInterval(syncMoodEmotion, 4.5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mouse Dragging on companion
+  const isDraggingRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const totalMovedRef = useRef(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    isDraggingRef.current = true;
+    startPosRef.current = { x: e.screenX, y: e.screenY };
+    totalMovedRef.current = 0;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const dx = moveEvent.screenX - startPosRef.current.x;
+      const dy = moveEvent.screenY - startPosRef.current.y;
+      totalMovedRef.current += Math.abs(dx) + Math.abs(dy);
+
+      if (dx !== 0 || dy !== 0) {
+        window?.fumii?.moveSpriteWindow?.(dx, dy);
+        startPosRef.current = { x: moveEvent.screenX, y: moveEvent.screenY };
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+
+      if (totalMovedRef.current < 6) {
+        handleCompanionClick();
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleCompanionClick = () => {
+    if (clickLockRef.current) return;
+    clickLockRef.current = true;
+    setClickReaction(true);
+    setSpriteState('happy');
+    window?.fumii?.openChat?.();
+    setTimeout(() => {
+      setClickReaction(false);
+    }, 800);
+    setTimeout(() => {
+      clickLockRef.current = false;
+    }, 1800);
+  };
 
   const handleMouseEnter = () => {
-    window.fumiiAPI?.sprite.setMouseEvents(true)
-  }
+    window?.fumii?.setInteractive?.(true);
+  };
 
   const handleMouseLeave = () => {
-    if (!isOpenRef.current) {
-      window.fumiiAPI?.sprite.setMouseEvents(false)
+    if (isDraggingRef.current) return;
+    if (!chatOpen) {
+      window?.fumii?.setInteractive?.(false);
     }
-  }
-
-  const scale = parseFloat(get('sprite_scale')) || 1.0
+  };
 
   return (
     <div
       style={{
-        width:      '100vw',
-        height:     '100vh',
-        position:   'relative',
-        userSelect: 'none',
-        overflow:   'hidden'
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column-reverse',
+        position: 'relative',
+        overflow: 'hidden'
       }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
-      {/* Scene + sprite — anchored bottom-right of window */}
-      <div style={{
-        position: 'absolute',
-        bottom:   0,
-        right:    0,
-        width:    280,
-        height:   220
-      }}>
-
-        {/* Thinking bubble — appears above sprite while processing */}
-        <ThinkingBubble visible={spriteState === 'thinking'} />
-
-        {/* Sprite — clickable, centered in scene */}
+      <SceneBackground>
         <div
-          onClick={() => handleToggleChat(!isOpen)}
           style={{
             position: 'absolute',
-            bottom:   20,
-            left:     '50%',
+            bottom: 20,
+            left: `${posX}%`,
             transform: 'translateX(-50%)',
-            cursor:   'pointer',
-            zIndex:   10,
-            transition: 'filter 150ms'
+            transition:
+              spriteState === 'walk-left' || spriteState === 'walk-right'
+                ? 'left 2.2s cubic-bezier(0.25, 1, 0.5, 1)'
+                : 'left 0.25s ease',
+            cursor: 'grab',
+            padding: 8
           }}
-          onMouseEnter={e => {
-            e.currentTarget.style.filter = 'brightness(1.1)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.filter = 'none'
-          }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onMouseDown={handleMouseDown}
+          title="Drag to move anywhere • Click to chat"
         >
-          <FumiiSprite
+          {/* Floating Heart / Sparkle on click */}
+          {clickReaction && (
+            <div
+              style={{
+                position: 'absolute',
+                top: -24,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: 18,
+                animation: 'fumii-float-heart 0.6s ease-out forwards',
+                pointerEvents: 'none'
+              }}
+            >
+              ✨
+            </div>
+          )}
+
+          <PetWidget
+            spritesheetPath={activePet?.spritesheetPath}
             state={spriteState}
-            scale={scale}
-            walkDirection={walkDirection}
+            pet={activePet}
           />
         </div>
-      </div>
+      </SceneBackground>
 
-      {/* Chat overlay — sits above the sprite scene, anchored to the right */}
-      {isOpen && (
-        <div style={{
-          position: 'absolute',
-          bottom:   220,
-          right:    0,
-          width:    360,
-          zIndex:   20
-        }}>
-          <ErrorBoundary fallbackMessage="chat hit an error — click to retry">
-            <ChatOverlay onClose={() => handleToggleChat(false)} />
-          </ErrorBoundary>
-        </div>
-      )}
+      {chatOpen && <ChatOverlay />}
+
+      <style>{`
+        @keyframes fumii-float-heart {
+          0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+          100% { opacity: 0; transform: translate(-50%, -20px) scale(1.3); }
+        }
+      `}</style>
     </div>
-  )
+  );
 }
+
+
 

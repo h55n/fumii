@@ -1,19 +1,14 @@
-import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import react from '@vitejs/plugin-react'
+import { resolve } from 'path';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      outDir: 'dist/main',
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'electron/main.ts')
-        },
-        output: {
-          format: 'cjs',
-          entryFileNames: '[name].js'
         }
       }
     }
@@ -21,27 +16,22 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      outDir: 'dist/preload',
       rollupOptions: {
         input: {
           preload: resolve(__dirname, 'electron/preload.ts')
-        },
-        output: {
-          format: 'cjs',
-          entryFileNames: '[name].js'
         }
       }
     }
   },
   renderer: {
     root: '.',
-    publicDir: false,
     build: {
-      outDir: 'dist/renderer',
       rollupOptions: {
         input: {
-          sprite:    resolve(__dirname, 'public/sprite.html'),
-          dashboard: resolve(__dirname, 'public/dashboard.html')
+          // Keep HTML entry points at the renderer root. This makes Vite emit
+          // sibling ./assets URLs that work unchanged from app.asar.
+          sprite: resolve(__dirname, 'sprite.html'),
+          dashboard: resolve(__dirname, 'dashboard.html')
         }
       }
     },
@@ -52,4 +42,4 @@ export default defineConfig({
     },
     plugins: [react()]
   }
-})
+});

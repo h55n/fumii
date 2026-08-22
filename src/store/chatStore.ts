@@ -1,70 +1,45 @@
-import { create } from 'zustand'
+import { create } from 'zustand';
 
-export type Role = 'user' | 'assistant'
-
-export interface ChatMessage {
-  id:        string
-  role:      Role
-  content:   string
-  timestamp: number
-  streaming: boolean
-}
+export type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  streaming?: boolean;
+};
 
 interface ChatState {
-  messages:    ChatMessage[]
-  isStreaming: boolean
-  isOpen:      boolean
-
-  addMessage:     (role: Role, content: string) => string
-  updateMessage:  (id: string, chunk: string) => void
-  finalizeMessage:(id: string) => void
-  clearMessages:  () => void
-  setOpen:        (open: boolean) => void
-  setStreaming:   (v: boolean) => void
-
-  /** Returns message array suitable for passing to LLM */
-  getHistoryForLLM: () => Array<{ role: Role; content: string }>
+  messages: ChatMessage[];
+  isThinking: boolean;
+  addMessage: (m: Omit<ChatMessage, 'id'>) => string;
+  appendStreamToken: (id: string, token: string) => void;
+  finishStream: (id: string, full: string) => void;
+  setThinking: (v: boolean) => void;
+  reset: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  messages:    [],
-  isStreaming: false,
-  isOpen:      false,
-
-  addMessage: (role, content) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-    set(state => ({
-      messages: [
-        ...state.messages.slice(-39), // keep rolling 40-message window
-        { id, role, content, timestamp: Date.now(), streaming: role === 'assistant' && content === '' }
-      ]
-    }))
-    return id
+  messages: [],
+  isThinking: false,
+  addMessage: (m) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    set({ messages: [...get().messages, { ...m, id }] });
+    return id;
   },
-
-  updateMessage: (id, chunk) => {
-    set(state => ({
-      messages: state.messages.map(m =>
-        m.id === id ? { ...m, content: m.content + chunk } : m
+  appendStreamToken: (id, token) => {
+    set({
+      messages: get().messages.map((msg) =>
+        msg.id === id ? { ...msg, content: msg.content + token } : msg
       )
-    }))
+    });
   },
-
-  finalizeMessage: (id) => {
-    set(state => ({
-      messages: state.messages.map(m =>
-        m.id === id ? { ...m, streaming: false } : m
-      )
-    }))
+  finishStream: (id, full) => {
+    set({
+      messages: get().messages.map((msg) =>
+        msg.id === id ? { ...msg, content: full, streaming: false } : msg
+      ),
+      isThinking: false
+    });
   },
-
-  clearMessages: () => set({ messages: [], isStreaming: false }),
-
-  setOpen:      (open) => set({ isOpen: open }),
-  setStreaming:  (v)    => set({ isStreaming: v }),
-
-  getHistoryForLLM: () =>
-    get().messages
-      .filter(m => !m.streaming && m.content.trim())
-      .map(m => ({ role: m.role, content: m.content }))
-}))
+  setThinking: (isThinking) => set({ isThinking }),
+  reset: () => set({ messages: [], isThinking: false })
+}));

@@ -13,7 +13,7 @@
     "build": "electron-vite build",
     "build:win": "electron-vite build && electron-builder --win nsis dir && node scripts/patch-exe-metadata.js",
     "build:mac": "electron-vite build && electron-builder --mac dmg zip",
-    "build:linux": "electron-vite build && electron-builder --linux AppImage deb",
+    "build:linux": "electron-vite build && electron-builder --linux tar.gz zip",
     "publish:win": "electron-vite build && electron-builder --win --publish always",
     "publish:mac": "electron-vite build && electron-builder --mac --publish always",
     "publish:linux": "electron-vite build && electron-builder --linux --publish always",

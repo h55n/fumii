@@ -49,7 +49,7 @@ void discoverDesktopHost() {
   bool found = false;
   char packetBuffer[256];
 
-  while (millis() - start < 1500UL) {
+  while (millis() - start < 4000UL) {
     int packetSize = udp.parsePacket();
     if (packetSize > 0) {
       int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);

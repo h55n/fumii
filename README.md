@@ -8,9 +8,10 @@
 
 ![RELEASE](https://img.shields.io/badge/RELEASE-v2.0.0-2563EB?style=flat-square&labelColor=1a1a2e)
 [![Windows Setup](https://img.shields.io/badge/WINDOWS%20SETUP-.exe-0078D4?style=flat-square&labelColor=222222&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe)
-[![Linux AppImage](https://img.shields.io/badge/LINUX%20APPIMAGE-.AppImage-FCC624?style=flat-square&labelColor=222222&logo=linux)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-linux-x64.AppImage)
+[![Windows Portable](https://img.shields.io/badge/WINDOWS%20PORTABLE-.zip-555555?style=flat-square&labelColor=222222&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-portable.zip)
+[![Linux Release](https://img.shields.io/badge/LINUX%20RELEASE-.tar.gz%20%2F%20.zip-FCC624?style=flat-square&labelColor=222222&logo=linux)](https://github.com/h55n/fumii/releases/tag/v2.0.0)
 [![ESP32-S3](https://img.shields.io/badge/FIRMWARE-ESP32--S3-E7343F?style=flat-square&labelColor=222222&logo=espressif)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip)
-[![QuadBot ESP8266](https://img.shields.io/badge/ROBOT-ESP8266%20QuadBot-9B59B6?style=flat-square&labelColor=222222)](firmware-quadbot/)
+[![QuadBot ESP8266](https://img.shields.io/badge/ROBOT-ESP8266%20QuadBot-9B59B6?style=flat-square&labelColor=222222)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-quadbot-firmware.zip)
 [![License](https://img.shields.io/badge/LICENSE-MIT-F5A623?style=flat-square&labelColor=222222)](LICENSE)
 ![BUILT BY](https://img.shields.io/badge/BUILT%20BY-Team%20fumii-9B59B6?style=flat-square&labelColor=222222)
 

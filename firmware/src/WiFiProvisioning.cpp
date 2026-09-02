@@ -46,6 +46,8 @@ static String generatePortalHtml(const std::vector<String>& networks) {
     "</div>"
     "<label>Wi-Fi Password</label>"
     "<input type=\"password\" name=\"password\" placeholder=\"Wi-Fi password\" maxlength=\"63\">"
+    "<label>Desktop IP / Host (Optional — Auto Discovered)</label>"
+    "<input type=\"text\" name=\"desktop_host\" placeholder=\"e.g. 192.168.1.105 or fumii-desktop.local\">"
     "<button type=\"submit\">Connect Fumii</button>"
     "</form>"
     "<div class=\"footer\">fumii &bull; you're never really alone</div>"
@@ -157,6 +159,7 @@ bool WiFiProvisioning::startProvisioningPortal() {
       ssid = server.arg("custom_ssid");
     }
     String password = server.arg("password");
+    String desktopHost = server.arg("desktop_host");
 
     if (ssid.isEmpty()) {
       server.send(400, "text/plain", "SSID is required");
@@ -167,6 +170,9 @@ bool WiFiProvisioning::startProvisioningPortal() {
     prefs.begin("fumii", false);
     prefs.putString("ssid", ssid);
     prefs.putString("password", password);
+    if (!desktopHost.isEmpty()) {
+      prefs.putString("desktop_host", desktopHost);
+    }
     prefs.end();
 
     Serial.printf("[fumii] credentials saved: SSID=%s\n", ssid.c_str());
@@ -207,9 +213,15 @@ bool WiFiProvisioning::connect() {
   prefs.begin("fumii", true);
   String ssid = prefs.getString("ssid", "");
   String pass = prefs.getString("password", "");
+  String savedHost = prefs.getString("desktop_host", "");
   prefs.end();
 
   if (ssid.isEmpty()) return false;
+
+  if (!savedHost.isEmpty()) {
+    strncpy(deviceConfig.desktopHost, savedHost.c_str(), sizeof(deviceConfig.desktopHost) - 1);
+    Serial.printf("[fumii] loaded stored desktop host: %s\n", deviceConfig.desktopHost);
+  }
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid.c_str(), pass.c_str());

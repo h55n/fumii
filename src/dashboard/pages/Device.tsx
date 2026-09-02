@@ -4,11 +4,13 @@ import { useAppStore } from '../../store/appStore';
 import { AnimatedFumiiCompanion } from '../../pet/PetWidget';
 
 export function Device() {
-  const { status, pairingStatus, isPairing, pairingError, load, pair, unpair, setMode, identify, restart } = useDeviceStore();
+  const { status, pairingStatus, networkInfo, isPairing, pairingError, load, pair, unpair, setMode, identify, restart } = useDeviceStore();
   const { spriteState } = useAppStore();
 
   const [showWizard, setShowWizard] = useState(false);
+  const [showQuadbotGuide, setShowQuadbotGuide] = useState(false);
   const [showUnpairModal, setShowUnpairModal] = useState(false);
+  const [copiedIp, setCopiedIp] = useState(false);
   const [testLog, setTestLog] = useState<string[]>(() => {
     // Contextual initial log based on real state — not a blanket "system ready"
     if (pairingStatus === 'paired' || pairingStatus === 'paired-offline') {
@@ -26,6 +28,15 @@ export function Device() {
   const addLog = (msg: string) => {
     const time = new Date().toLocaleTimeString();
     setTestLog((prev) => [`[${time}] ${msg}`, ...prev.slice(0, 5)]);
+  };
+
+  const handleCopyIp = () => {
+    if (networkInfo?.localIp) {
+      navigator.clipboard.writeText(networkInfo.localIp);
+      setCopiedIp(true);
+      addLog(`Copied computer LAN IP (${networkInfo.localIp}) to clipboard.`);
+      setTimeout(() => setCopiedIp(false), 2000);
+    }
   };
 
   const handlePair = async () => {
@@ -393,7 +404,7 @@ export function Device() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
               gap: 12,
               marginTop: 22,
               paddingTop: 20,
@@ -411,12 +422,22 @@ export function Device() {
             </div>
 
             <div style={{ background: 'var(--color-bg)', padding: '14px 18px', borderRadius: 16 }}>
-              <div className="label" style={{ margin: 0, fontSize: 11 }}>WI-FI CONNECTION</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4 }}>
-                {isConnected ? (status.wifi || 'Strong') : '—'}
+              <div className="label" style={{ margin: 0, fontSize: 11 }}>WI-FI NETWORK</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                {isConnected ? (status.wifi || 'Connected') : '—'}
               </div>
               <div style={{ fontSize: 11, color: isConnected ? 'var(--color-blue)' : 'var(--color-text-secondary)', marginTop: 2 }}>
-                {isConnected ? 'Connected' : 'Disconnected'}
+                {isConnected ? (status.wifiRssi ? `${status.wifiRssi} dBm` : 'Strong Signal') : 'Disconnected'}
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--color-bg)', padding: '14px 18px', borderRadius: 16 }}>
+              <div className="label" style={{ margin: 0, fontSize: 11 }}>DEVICE IP</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
+                {isConnected ? (status.ip || '192.168.x.x') : '—'}
+              </div>
+              <div style={{ fontSize: 11, color: isConnected ? 'var(--color-blue)' : 'var(--color-text-secondary)', marginTop: 2 }}>
+                {isConnected ? 'LAN Address' : 'Unassigned'}
               </div>
             </div>
 
@@ -560,6 +581,233 @@ export function Device() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Network & Zero-Friction Discovery Status ────────────────── */}
+      <div
+        className="card"
+        style={{
+          padding: '24px 28px',
+          borderRadius: 22,
+          marginBottom: 24,
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                Host Computer & Wi-Fi Discovery
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  padding: '2px 8px',
+                  borderRadius: 9999,
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  color: 'var(--color-green)'
+                }}
+              >
+                ● Active
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>
+              Automatic UDP beacon (port 8766) and MQTT broker (port 1883) running for Windows, Linux & macOS clients.
+            </div>
+          </div>
+
+          <button
+            onClick={handleCopyIp}
+            className="btn-secondary"
+            style={{ fontSize: 12, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
+            title="Click to copy host IP"
+          >
+            <span>{copiedIp ? '✓ Copied IP!' : '📋 Copy Host LAN IP'}</span>
+            <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: 6, fontSize: 11 }}>
+              {networkInfo?.localIp || '127.0.0.1'}
+            </code>
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+            gap: 12,
+            marginTop: 18,
+            paddingTop: 16,
+            borderTop: '1px solid var(--color-border)'
+          }}
+        >
+          <div style={{ background: 'var(--color-bg)', padding: '12px 16px', borderRadius: 14 }}>
+            <div className="label" style={{ margin: 0, fontSize: 10 }}>MQTT BROKER</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4 }}>
+              Port 1883
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-green)', marginTop: 2 }}>
+              Telemetry & Control
+            </div>
+          </div>
+
+          <div style={{ background: 'var(--color-bg)', padding: '12px 16px', borderRadius: 14 }}>
+            <div className="label" style={{ margin: 0, fontSize: 10 }}>AUDIO STREAMER</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4 }}>
+              Port 8765
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-blue)', marginTop: 2 }}>
+              WebSocket PCM16
+            </div>
+          </div>
+
+          <div style={{ background: 'var(--color-bg)', padding: '12px 16px', borderRadius: 14 }}>
+            <div className="label" style={{ margin: 0, fontSize: 10 }}>ZERO-CONF BEACON</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4 }}>
+              UDP Port 8766
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-green)', marginTop: 2 }}>
+              Broadcasting on LAN
+            </div>
+          </div>
+
+          <div style={{ background: 'var(--color-bg)', padding: '12px 16px', borderRadius: 14 }}>
+            <div className="label" style={{ margin: 0, fontSize: 10 }}>HOST NAME</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 4, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              {networkInfo?.hostname || 'fumii-host'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              Local Device
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── QuadBot-E Quadruped Robot (ESP8266) ──────────────────────── */}
+      <div
+        className="card"
+        style={{
+          padding: '24px 28px',
+          borderRadius: 22,
+          marginBottom: 24,
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                background: 'rgba(163, 113, 247, 0.15)',
+                color: '#a371f7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 22
+              }}
+            >
+              🤖
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  ACEBOTT QD020 QuadBot (ESP8266)
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    padding: '2px 8px',
+                    borderRadius: 9999,
+                    background: 'rgba(163, 113, 247, 0.2)',
+                    color: '#c084fc'
+                  }}
+                >
+                  8-Servo Robot
+                </span>
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>
+                Fast snappy motion v3 firmware ready. Connect directly to robot Wi-Fi AP to drive and dance.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => setShowQuadbotGuide((prev) => !prev)}
+              className="btn-ghost-sm"
+              style={{ fontSize: 12, padding: '7px 14px' }}
+            >
+              {showQuadbotGuide ? 'Hide Guide' : '📖 Pairing Steps'}
+            </button>
+            <a
+              href="http://192.168.4.1"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-pill"
+              style={{
+                fontSize: 12,
+                padding: '7px 16px',
+                background: '#7c3aed',
+                color: '#ffffff',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              Open Web Controller →
+            </a>
+          </div>
+        </div>
+
+        {showQuadbotGuide && (
+          <div
+            style={{
+              marginTop: 18,
+              paddingTop: 18,
+              borderTop: '1px solid var(--color-border)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 14,
+              animation: 'fadeIn 180ms ease'
+            }}
+          >
+            <div style={{ background: 'var(--color-bg)', padding: '14px', borderRadius: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#a371f7', marginBottom: 4 }}>
+                1. Flash QuadBot
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                In terminal: <code>cd firmware-quadbot && pio run -t upload</code> or flash via Arduino IDE.
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--color-bg)', padding: '14px', borderRadius: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#a371f7', marginBottom: 4 }}>
+                2. Connect Wi-Fi
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                Connect your laptop/phone to Wi-Fi: <b>QuadBot-E</b> (Password: <code>12345678</code>).
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--color-bg)', padding: '14px', borderRadius: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#a371f7', marginBottom: 4 }}>
+                3. Control in Browser
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                Navigate to <b>http://192.168.4.1</b>. Control directional walk, fight stances, dances, and sleep/wake!
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Unpair Confirmation Modal ───────────────────────────────── */}

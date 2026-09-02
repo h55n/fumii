@@ -165,6 +165,18 @@ void MQTTHandler::publishWifi(const char* ssid) {
   client.publish(Topics::DEVICE_WIFI, ssid, false);
 }
 
+void MQTTHandler::publishWifiRssi(int32_t rssi) {
+  client.publish(Topics::DEVICE_WIFI_RSSI, String(rssi).c_str(), false);
+}
+
+void MQTTHandler::publishIp(const char* ip) {
+  client.publish(Topics::DEVICE_IP, ip, false);
+}
+
+void MQTTHandler::publishFirmwareVersion(const char* version) {
+  client.publish(Topics::DEVICE_FW_VERSION, version, true);
+}
+
 void MQTTHandler::handleMessage(char* topic, byte* payload, unsigned int length) {
   String msg;
   for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];

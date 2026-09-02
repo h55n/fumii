@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <ESPmDNS.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
@@ -28,6 +29,63 @@ WiFiProvisioning provisioning;
 WebSocketsClient audioSocket;
 
 bool speaking = false;
+
+void discoverDesktopHost() {
+  // If a valid non-default IP or hostname was loaded from NVS, use it
+  if (strlen(deviceConfig.desktopHost) > 0 && strcmp(deviceConfig.desktopHost, "fumii-desktop.local") != 0) {
+    Serial.printf("[fumii] using pre-configured desktop host: %s\n", deviceConfig.desktopHost);
+    return;
+  }
+
+  // 1. Try zero-conf UDP discovery on port 8766
+  WiFiUDP udp;
+  udp.begin(8766);
+  const char* query = "{\"query\":\"fumii-desktop\"}";
+  udp.beginPacket(IPAddress(255, 255, 255, 255), 8766);
+  udp.write((const uint8_t*)query, strlen(query));
+  udp.endPacket();
+
+  unsigned long start = millis();
+  bool found = false;
+  char packetBuffer[256];
+
+  while (millis() - start < 1500UL) {
+    int packetSize = udp.parsePacket();
+    if (packetSize > 0) {
+      int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+      if (len > 0) {
+        packetBuffer[len] = '\0';
+        StaticJsonDocument<256> doc;
+        DeserializationError err = deserializeJson(doc, packetBuffer);
+        if (!err && doc.containsKey("host")) {
+          const char* host = doc["host"];
+          if (host && strlen(host) > 0) {
+            strncpy(deviceConfig.desktopHost, host, sizeof(deviceConfig.desktopHost) - 1);
+            Serial.printf("[fumii] zero-conf UDP discovered desktop: %s\n", deviceConfig.desktopHost);
+            found = true;
+            break;
+          }
+        }
+      }
+    }
+    delay(20);
+  }
+  udp.stop();
+
+  if (found) return;
+
+  // 2. Fallback to mDNS
+  if (MDNS.begin("fumii-device")) {
+    IPAddress resolved = MDNS.queryHost("fumii-desktop", 1000);
+    if (resolved != IPAddress()) {
+      strncpy(deviceConfig.desktopHost, resolved.toString().c_str(), sizeof(deviceConfig.desktopHost) - 1);
+      Serial.printf("[fumii] mDNS resolved desktop: %s\n", deviceConfig.desktopHost);
+      return;
+    }
+  }
+
+  Serial.printf("[fumii] discovery fallback default host: %s\n", deviceConfig.desktopHost);
+}
 
 void onModeChanged(const char* newMode) {
   mqtt.publishMode(newMode);
@@ -99,22 +157,17 @@ void setup() {
   }
   Serial.printf("[fumii] wifi connected: %s\n", WiFi.localIP().toString().c_str());
 
-  // ── mDNS resolve desktop ──
-  // queryHost with explicit 1000ms timeout — avoids a 2s blocking hang on
-  // first boot when the desktop mDNS service is not yet advertising.
-  if (MDNS.begin("fumii-device")) {
-    IPAddress resolved = MDNS.queryHost("fumii-desktop", 1000);
-    if (resolved != IPAddress()) {
-      strncpy(deviceConfig.desktopHost, resolved.toString().c_str(), sizeof(deviceConfig.desktopHost) - 1);
-      Serial.printf("[fumii] mDNS resolved desktop: %s\n", deviceConfig.desktopHost);
-    }
-  }
+  // ── Auto-Discover Desktop Host ──
+  discoverDesktopHost();
 
   // ── MQTT ──
   mqtt.init(netClient, &display);
 
-  // Report connected SSID to desktop so the telemetry tile shows the real network name
+  // Report connected SSID, RSSI, and IP to desktop so telemetry reflects live status
   mqtt.publishWifi(WiFi.SSID().c_str());
+  mqtt.publishWifiRssi(WiFi.RSSI());
+  mqtt.publishIp(WiFi.localIP().toString().c_str());
+  mqtt.publishFirmwareVersion("2.0.0");
 
   // ── WebSocket audio ──
   audioSocket.begin(deviceConfig.desktopHost, deviceConfig.wsPort, "/audio/input");

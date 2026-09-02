@@ -8,14 +8,15 @@ async function patchExe(exePath) {
     return;
   }
 
+  const pkg = require('../package.json');
   const iconPath = path.resolve(__dirname, '../assets/icon.ico');
 
-  console.log(`[patch-exe] Patching metadata for: ${exePath}`);
+  console.log(`[patch-exe] Patching metadata for: ${exePath} (version: ${pkg.version})`);
   try {
     await rcedit(exePath, {
       icon: iconPath,
-      'file-version': '1.0.0',
-      'product-version': '1.0.0',
+      'file-version': pkg.version,
+      'product-version': pkg.version,
       'version-string': {
         ProductName: 'fumii',
         FileDescription: 'fumii — Desktop AI Companion',

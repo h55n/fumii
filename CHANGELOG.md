@@ -4,6 +4,34 @@ All notable changes to this project during the development sessions will be docu
 
 ---
 
+## [2026-09-02] — Zero-Friction Wi-Fi Hardware Pairing, UDP Auto-Discovery & ACEBOTT QuadBot Integration
+
+### 📡 Zero-Friction LAN Discovery & Cross-Platform Wi-Fi Pairing
+- **DiscoveryService Engine (`electron/services/DiscoveryService.ts`)**:
+  - Implemented background UDP broadcast service on port `8766` broadcasting computer LAN IP and listening for device search queries (`{"query":"fumii-desktop"}`).
+  - Resolves cross-platform mDNS / Bonjour limitations on Windows and Linux so physical devices instantly discover and connect to the desktop's real IP address without manual configuration.
+- **Hardware IPC & Telemetry Bridge (`electron/ipc/hardwareHandlers.ts`, `electron/main.ts`)**:
+  - Registered `hardware:getNetworkInfo` providing local IP, hostname, and port statuses.
+  - Added real-time tracking for device IP (`fumii/device/ip`), Wi-Fi RSSI signal strength (`fumii/device/wifi_rssi`), and firmware version (`fumii/device/firmware_version`).
+- **Dashboard Network & Telemetry Dashboard (`src/dashboard/pages/Device.tsx`)**:
+  - Added Host Computer & Wi-Fi Discovery status card with one-click LAN IP copy and port indicators (MQTT 1883, Audio WS 8765, UDP Beacon 8766).
+  - Enhanced device telemetry grid displaying live Battery %, Wi-Fi Network & RSSI, Device LAN IP, Mic, and Speaker status.
+
+### 🤖 ACEBOTT QD020 QuadBot Firmware & Web Controller
+- **Integrated QuadBot Project (`firmware-quadbot/`)**:
+  - Added production-ready 8-servo quadruped robot firmware (`8_4web_control_fast.ino`, `motion_fast.h`, `text.h`, `ui.h`) featuring v3 snappy motion curve (`GAIT_SPEED_PERCENT = 60`).
+  - Added PlatformIO configuration (`platformio.ini` for `espressif8266 / d1_mini`) and complete hardware guide (`firmware-quadbot/README.md`).
+  - Direct Wi-Fi AP control on `QuadBot-E` (`http://192.168.4.1`) with full D-Pad movement, tricks, fight stances, dances, and sleep/wake.
+  - Integrated QuadBot control & pairing card directly inside the desktop app's Device page.
+
+### 📦 Release Packaging & Multi-Platform Documentation
+- **Metadata Patching Fix (`scripts/patch-exe-metadata.js`)**:
+  - Updated Windows executable metadata stamping to dynamically read version from `package.json` (`v2.0.0`).
+- **Hardware Pairing & Releases Guide (`docs/HARDWARE_PAIRING_AND_RELEASES.md`)**:
+  - Added complete setup, firewall (Linux UFW / Windows), Wi-Fi provisioning, and troubleshooting documentation for Linux (`.AppImage`, `.deb`) and Windows (`.exe`) users.
+
+---
+
 ## [2026-08-22] — Provenance & Lineage Architecture: Memory-Sourced Confirmation Steps
 
 ### 🔍 Provenance & Memory Lineage System

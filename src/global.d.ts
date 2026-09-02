@@ -27,6 +27,15 @@ export type DeviceStatus = {
   apSsid?: string;  // AP SSID broadcast during provisioning (fumii-setup-XXXX)
 };
 
+export interface NetworkInfo {
+  localIp: string;
+  hostname: string;
+  mqttPort: number;
+  wsPort: number;
+  discoveryPort: number;
+  allIps: string[];
+}
+
 export interface WhisperModelInfo {
   id: string;
   label: string;
@@ -74,6 +83,7 @@ export interface FumiiAPI {
 
   getDeviceStatus: () => Promise<DeviceStatus>;
   getPairingStatus: () => Promise<PairingStatus>;
+  getNetworkInfo: () => Promise<NetworkInfo>;
   pairDevice: () => Promise<boolean>;
   unpairDevice: () => Promise<boolean>;
   setDeviceMode: (mode: 'companion' | 'assistant') => Promise<void>;

@@ -45,6 +45,7 @@ import { registerPetHandlers } from './ipc/petHandlers';
 import { registerHardwareHandlers } from './ipc/hardwareHandlers';
 import { registerSystemTestHandlers } from './ipc/systemTestHandlers';
 import { MQTTBroker } from './services/MQTTBroker';
+import { DiscoveryService } from './services/DiscoveryService';
 import { AudioStreamer } from './services/AudioStreamer';
 import { WhisperService } from './services/WhisperService';
 import { KokoroTTSService } from './services/KokoroTTSService';
@@ -92,6 +93,7 @@ app.whenReady().then(async () => {
     logStep('[3/8] PetManager default pet ensured');
 
     let broker: MQTTBroker | null = null;
+    let discovery: DiscoveryService | null = null;
     let audioStreamer: AudioStreamer | null = null;
     const whisper = new WhisperService();
     const kokoro = new KokoroTTSService();
@@ -99,9 +101,16 @@ app.whenReady().then(async () => {
 
     if (ENABLE_HARDWARE) {
       broker = new MQTTBroker(1883);
+      discovery = new DiscoveryService({
+        discoveryPort: 8766,
+        mqttPort: 1883,
+        wsPort: 8765,
+        getDesktopId: () => getSetting(db, 'desktop_id') || 'fumii-desktop'
+      });
       audioStreamer = new AudioStreamer(8765);
       try {
         await broker.start();
+        await discovery.start();
         audioStreamer.start();
         audioStreamer.on('utterance-complete', async (pcm: Buffer) => {
           try {
@@ -112,7 +121,7 @@ app.whenReady().then(async () => {
           }
         });
       } catch (e) {
-        console.warn('[hardware] failed to start MQTT/audio services', e);
+        console.warn('[hardware] failed to start MQTT/discovery/audio services', e);
       }
     }
 
@@ -137,6 +146,7 @@ app.whenReady().then(async () => {
     const hardwareTeardown = registerHardwareHandlers(ipcMain, {
       db,
       broker,
+      discovery,
       getSpriteWindow: () => spriteManager.window,
       getDashboardWindow: () => dashboardManager.window
     });
@@ -219,6 +229,9 @@ app.whenReady().then(async () => {
     app.on('before-quit', () => {
       try {
         hardwareTeardown?.cleanup();
+      } catch {}
+      try {
+        discovery?.stop();
       } catch {}
       try {
         broker?.stop();

@@ -1,5 +1,6 @@
 import type { IpcMain } from 'electron';
 import type { MQTTBroker } from '../services/MQTTBroker';
+import type { DiscoveryService } from '../services/DiscoveryService';
 import type Database from 'better-sqlite3';
 import { randomBytes } from 'crypto';
 import { getSetting, setSetting } from '../db/queries';
@@ -10,9 +11,12 @@ export type DeviceStatus = {
   connected: boolean;
   battery: number | null;
   wifi: string | null;
+  wifiRssi?: number | null;
   lastSeen: string | null;
   mode: 'companion' | 'assistant';
   pairingStatus: PairingStatus;
+  firmwareVersion?: string;
+  ip?: string;
   apSsid?: string;  // SSID advertised by SoftAP during first-time provisioning
 };
 
@@ -25,6 +29,7 @@ export function registerHardwareHandlers(
   deps: {
     db: Database.Database;
     broker: MQTTBroker | null;
+    discovery: DiscoveryService | null;
     getSpriteWindow: () => Electron.BrowserWindow | null;
     getDashboardWindow: () => Electron.BrowserWindow | null;
   }
@@ -34,9 +39,12 @@ export function registerHardwareHandlers(
     connected: false,
     battery: null,
     wifi: null,
+    wifiRssi: null,
     lastSeen: null,
     mode: (getSetting(deps.db, 'active_mode') as any) || 'companion',
-    pairingStatus: 'none-found'
+    pairingStatus: 'none-found',
+    ip: undefined,
+    firmwareVersion: undefined
   };
 
   const broadcast = (channel: string, ...args: any[]) => {
@@ -111,6 +119,15 @@ export function registerHardwareHandlers(
       status.wifi = payload;
       status.apSsid = undefined;
       broadcast('device:statusChanged', status);
+    } else if (topic === 'fumii/device/wifi_rssi') {
+      status.wifiRssi = parseInt(payload, 10);
+      broadcast('device:statusChanged', status);
+    } else if (topic === 'fumii/device/ip') {
+      status.ip = payload;
+      broadcast('device:statusChanged', status);
+    } else if (topic === 'fumii/device/firmware_version') {
+      status.firmwareVersion = payload;
+      broadcast('device:statusChanged', status);
     } else if (topic === 'fumii/device/mode') {
       status.mode = payload as 'companion' | 'assistant';
       setSetting(deps.db, 'active_mode', payload);
@@ -136,6 +153,16 @@ export function registerHardwareHandlers(
 
   ipcMain.handle('hardware:getStatus', () => status);
   ipcMain.handle('hardware:getPairingStatus', () => status.pairingStatus);
+  ipcMain.handle('hardware:getNetworkInfo', () => {
+    return deps.discovery?.getNetworkInfo() || {
+      localIp: '127.0.0.1',
+      hostname: 'localhost',
+      mqttPort: 1883,
+      wsPort: 8765,
+      discoveryPort: 8766,
+      allIps: ['127.0.0.1']
+    };
+  });
 
   ipcMain.handle('hardware:pairDevice', async () => {
     const desktopId = getDesktopId();

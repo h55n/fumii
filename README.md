@@ -8,13 +8,14 @@
 
 ![RELEASE](https://img.shields.io/badge/RELEASE-v2.0.0-2563EB?style=flat-square&labelColor=1a1a2e)
 [![Windows Setup](https://img.shields.io/badge/WINDOWS%20SETUP-.exe-0078D4?style=flat-square&labelColor=222222&logo=windows)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-setup.exe)
-[![Windows Portable](https://img.shields.io/badge/WINDOWS%20PORTABLE-.zip-555555?style=flat-square&labelColor=222222)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-windows-portable.zip)
+[![Linux AppImage](https://img.shields.io/badge/LINUX%20APPIMAGE-.AppImage-FCC624?style=flat-square&labelColor=222222&logo=linux)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-linux-x64.AppImage)
 [![ESP32-S3](https://img.shields.io/badge/FIRMWARE-ESP32--S3-E7343F?style=flat-square&labelColor=222222&logo=espressif)](https://github.com/h55n/fumii/releases/download/v2.0.0/fumii-2.0.0-esp32s3-firmware.zip)
+[![QuadBot ESP8266](https://img.shields.io/badge/ROBOT-ESP8266%20QuadBot-9B59B6?style=flat-square&labelColor=222222)](firmware-quadbot/)
 [![License](https://img.shields.io/badge/LICENSE-MIT-F5A623?style=flat-square&labelColor=222222)](LICENSE)
 ![BUILT BY](https://img.shields.io/badge/BUILT%20BY-Team%20fumii-9B59B6?style=flat-square&labelColor=222222)
 
 ![TRACK](https://img.shields.io/badge/TRACK-Agentic%20Autonomous%20Systems-2ECC71?style=flat-square&labelColor=333333)
-![HARDWARE](https://img.shields.io/badge/HARDWARE-ESP32--S3%20%2B%20TFT%20%2B%20I2S-F39C12?style=flat-square&labelColor=333333)
+![HARDWARE](https://img.shields.io/badge/HARDWARE-ESP32--S3%20%2B%20ESP8266%20QuadBot-F39C12?style=flat-square&labelColor=333333)
 ![MEMORY](https://img.shields.io/badge/MEMORY-Local%20SQLite%20%2B%20Provenance-E74C3C?style=flat-square&labelColor=333333)
 
 </div>
@@ -427,6 +428,22 @@ npm run build:linux
 # macOS DMG & Zip Bundle
 npm run build:mac
 ```
+
+---
+
+## 📡 Hardware & Zero-Friction Wi-Fi Pairing
+
+Fumii supports direct Wi-Fi pairing across **Windows**, **Linux**, and **macOS** with zero manual IP setup:
+
+1. **Fumii Companion Device (ESP32-S3):**
+   - Connects to Wi-Fi via captive portal on SoftAP `fumii-setup-XXXX` (`http://192.168.4.1`).
+   - Automatically discovers your desktop computer on the LAN using UDP beacon on port `8766` and connects to the local MQTT broker (port `1883`) and Audio WebSocket (port `8765`).
+   - One-click cryptographic pairing from the **Device & Companion** page.
+2. **ACEBOTT QD020 QuadBot (ESP8266):**
+   - 8-servo quadruped robot powered by snappy v3 motion curve firmware in [`firmware-quadbot/`](firmware-quadbot/).
+   - Broadcasts standalone Wi-Fi AP `QuadBot-E` (password `12345678`) with a touch-friendly web control panel at `http://192.168.4.1`.
+3. **Full Pairing & Releases Guide:**
+   - See [`docs/HARDWARE_PAIRING_AND_RELEASES.md`](docs/HARDWARE_PAIRING_AND_RELEASES.md) for Linux UFW firewall rules, firmware flashing steps, and troubleshooting.
 
 ---
 

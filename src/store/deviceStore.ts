@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { DeviceStatus, PairingStatus } from '../global';
+import type { DeviceStatus, PairingStatus, NetworkInfo } from '../global';
 
 interface DeviceState {
   status: DeviceStatus;
   pairingStatus: PairingStatus;
+  networkInfo: NetworkInfo | null;
   isPairing: boolean;
   pairingError: string | null;
   load: () => Promise<void>;
@@ -46,31 +47,36 @@ export const useDeviceStore = create<DeviceState>((set, get) => {
       connected: false,
       battery: null,
       wifi: null,
+      wifiRssi: null,
       lastSeen: null,
       mode: 'companion',
       pairingStatus: 'none-found'
     },
     pairingStatus: 'none-found',
+    networkInfo: null,
     isPairing: false,
     pairingError: null,
 
     load: async () => {
       try {
-        const [status, pairingStatus] = await Promise.all([
+        const [status, pairingStatus, networkInfo] = await Promise.all([
           window.fumii?.getDeviceStatus?.() || {
             connected: false,
             battery: null,
             wifi: null,
+            wifiRssi: null,
             lastSeen: null,
             mode: 'companion',
             pairingStatus: 'none-found'
           },
-          window.fumii?.getPairingStatus?.() || 'none-found'
+          window.fumii?.getPairingStatus?.() || 'none-found',
+          window.fumii?.getNetworkInfo?.() || null
         ]);
 
         set({
           status,
-          pairingStatus: pairingStatus || status.pairingStatus || 'none-found'
+          pairingStatus: pairingStatus || status.pairingStatus || 'none-found',
+          networkInfo: networkInfo || get().networkInfo
         });
       } catch (err: any) {
         console.warn('[deviceStore] failed to load status:', err);

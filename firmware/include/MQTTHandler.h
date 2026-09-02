@@ -12,6 +12,9 @@ namespace Topics {
   constexpr const char* DEVICE_BATTERY    = "fumii/device/battery";
   constexpr const char* DEVICE_BUTTON     = "fumii/device/button";
   constexpr const char* DEVICE_WIFI       = "fumii/device/wifi";
+  constexpr const char* DEVICE_WIFI_RSSI  = "fumii/device/wifi_rssi";
+  constexpr const char* DEVICE_IP         = "fumii/device/ip";
+  constexpr const char* DEVICE_FW_VERSION = "fumii/device/firmware_version";
 
   constexpr const char* DESKTOP_PAIR      = "fumii/desktop/pair";
   constexpr const char* DESKTOP_UNPAIR    = "fumii/desktop/unpair";
@@ -33,6 +36,9 @@ public:
   void publishMode(const char* mode);
   void publishBattery(uint8_t percent);
   void publishWifi(const char* ssid);   // called once after WiFi.connect() succeeds
+  void publishWifiRssi(int32_t rssi);
+  void publishIp(const char* ip);
+  void publishFirmwareVersion(const char* version);
   bool connected();
 
   // Pairing identity management

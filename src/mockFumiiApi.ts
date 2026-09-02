@@ -204,6 +204,15 @@ export function setupBrowserMockFumii(): void {
 
     getPairingStatus: async () => (deviceConnected ? 'paired' : 'found-unpaired'),
 
+    getNetworkInfo: async () => ({
+      localIp: '192.168.1.105',
+      hostname: 'fumii-dev-workstation',
+      mqttPort: 1883,
+      wsPort: 8765,
+      discoveryPort: 8766,
+      allIps: ['192.168.1.105', '10.0.0.12']
+    }),
+
     pairDevice: async () => {
       await new Promise((r) => setTimeout(r, 600));
       deviceConnected = true;

@@ -79,6 +79,7 @@ const api = {
   // Hardware / Device & Zero-Friction Pairing
   getDeviceStatus: () => ipcRenderer.invoke('hardware:getStatus'),
   getPairingStatus: () => ipcRenderer.invoke('hardware:getPairingStatus'),
+  getNetworkInfo: () => ipcRenderer.invoke('hardware:getNetworkInfo'),
   pairDevice: () => ipcRenderer.invoke('hardware:pairDevice'),
   unpairDevice: () => ipcRenderer.invoke('hardware:unpairDevice'),
   setDeviceMode: (mode: 'companion' | 'assistant') => ipcRenderer.invoke('hardware:setMode', mode),

@@ -3,6 +3,7 @@
   "include": ["electron/**/*", "electron.vite.config.ts"],
   "compilerOptions": {
     "composite": true,
+    "moduleResolution": "bundler",
     "types": ["electron-vite/node", "node"],
     "resolveJsonModule": true
   }

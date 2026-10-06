@@ -11,15 +11,30 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win
+          - os: macos-14
+            platform: mac
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.14.0
           cache: npm
+      - name: Install Linux native build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev
       - run: npm ci
       - run: npm audit --omit=dev
+      - run: npm audit --audit-level=high
       - run: npm test
+      - run: npm run test:native-electron
       - run: npm run typecheck
-      - run: npm run build
+      - run: npm run build:${{ matrix.platform }}

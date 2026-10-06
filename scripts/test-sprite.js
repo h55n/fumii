@@ -13,6 +13,7 @@ app.whenReady().then(async () => {
     y: y + height - 220 - 20,
     transparent: true,
     frame: false,
+    roundedCorners: false,
     resizable: false,
     alwaysOnTop: true,
     skipTaskbar: false,
@@ -25,8 +26,8 @@ app.whenReady().then(async () => {
     }
   });
 
-  win.webContents.on('console-message', (e, level, message, line, sourceId) => {
-    console.log(`[RENDERER-CONSOLE L${level}] ${message} (${sourceId}:${line})`);
+  win.webContents.on('console-message', (details) => {
+    console.log(`[RENDERER-CONSOLE ${details.level}] ${details.message} (${details.sourceId}:${details.lineNumber})`);
   });
 
   win.webContents.on('did-fail-load', (e, code, desc, url) => {

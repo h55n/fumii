@@ -23,6 +23,7 @@ export class DashboardWindowManager {
       minHeight: 560,
       center: true,
       frame: false,
+      roundedCorners: false,
       autoHideMenuBar: true,
       icon: join(app.getAppPath(), 'assets/icon.png'),
       backgroundColor: '#0F0F14',

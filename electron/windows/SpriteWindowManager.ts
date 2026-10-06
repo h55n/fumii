@@ -47,6 +47,7 @@ export class SpriteWindowManager {
       y: winY,
       transparent: true,
       frame: false,
+      roundedCorners: false,
       resizable: false,
       alwaysOnTop: true,
       skipTaskbar: true,

@@ -1,4 +1,4 @@
-import chokidar from 'chokidar';
+import chokidar, { type FSWatcher } from 'chokidar';
 import { app } from 'electron';
 import { join } from 'path';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
@@ -244,7 +244,7 @@ export const CODEX_PETS_REGISTRY: PetMetadata[] = [
 
 export class PetManager {
   private petsDir: string;
-  private watcher: chokidar.FSWatcher | null = null;
+  private watcher: FSWatcher | null = null;
   private onUpdate: ((pets: Pet[]) => void) | null = null;
 
   constructor() {
@@ -584,4 +584,3 @@ export class PetManager {
     this.onUpdate?.(this.list());
   }
 }
-

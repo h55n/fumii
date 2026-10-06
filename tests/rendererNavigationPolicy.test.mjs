@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import { isTrustedRendererNavigation, safeExternalHttpUrl } from '../electron/rendererNavigationPolicy.mjs';
 
 test('allows the exact trusted renderer document in development', () => {
@@ -17,9 +19,12 @@ test('rejects another path, origin, or port in development', () => {
 });
 
 test('allows only the same packaged file, not a neighboring file', () => {
-  const trusted = 'file:///opt/fumii/renderer/dashboard.html';
-  assert.equal(isTrustedRendererNavigation('file:///opt/fumii/renderer/dashboard.html#settings', trusted), true);
-  assert.equal(isTrustedRendererNavigation('file:///opt/fumii/renderer/sprite.html', trusted), false);
+  const rendererDir = resolve('test-fixtures', 'renderer');
+  const trusted = pathToFileURL(resolve(rendererDir, 'dashboard.html')).href;
+  const sameDocumentWithFragment = `${trusted}#settings`;
+  const neighboringDocument = pathToFileURL(resolve(rendererDir, 'sprite.html')).href;
+  assert.equal(isTrustedRendererNavigation(sameDocumentWithFragment, trusted), true);
+  assert.equal(isTrustedRendererNavigation(neighboringDocument, trusted), false);
 });
 
 test('normalizes safe external HTTP(S) links', () => {

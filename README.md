@@ -399,8 +399,9 @@ fumii/
 ## Getting Started & Development Guide
 
 ### Prerequisites
-- **Node.js 20+**
+- **Node.js 22.12+** (required by Electron 44 and the build toolchain)
 - **npm**
+- **Desktop runtime:** Windows 10/11 x64, Linux x64, or macOS 13+ (Electron 44 no longer supports macOS 12).
 
 ### 1. Clone and Install
 ```bash

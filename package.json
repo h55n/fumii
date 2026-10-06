@@ -6,6 +6,9 @@
   "author": "Hassan Rehman",
   "main": "out/main/main.js",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "dev:hardware": "cross-env ENABLE_HARDWARE=1 electron-vite dev",
@@ -20,11 +23,12 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "node --test tests/*.test.mjs",
+    "test:native-electron": "cross-env ELECTRON_RUN_AS_NODE=1 electron ./scripts/test-electron-native.cjs",
     "postinstall": "node scripts/check-ollama.js || true"
   },
   "dependencies": {
     "aedes": "^0.51.0",
-    "better-sqlite3": "^9.4.3",
+    "better-sqlite3": "^13.0.3",
     "chokidar": "^4.0.3",
     "dompurify": "^3.1.6",
     "electron-updater": "^6.2.1",
@@ -51,17 +55,17 @@
     "@electron-toolkit/utils": "^3.0.0",
     "@types/better-sqlite3": "^7.6.10",
     "@types/dompurify": "^3.0.5",
-    "@types/node": "^20.14.0",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.5.10",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "cross-env": "^7.0.3",
-    "electron": "^29.4.0",
-    "electron-builder": "^24.13.3",
-    "electron-vite": "^2.3.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "rcedit": "^5.0.2",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0"
+    "vite": "^7.3.7"
   }
 }

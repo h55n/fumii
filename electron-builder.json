@@ -37,7 +37,6 @@
     "signAndEditExecutable": false,
     "executableName": "fumii",
     "legalTrademarks": "fumii",
-    "publisherName": "fumii",
     "artifactName": "fumii-${version}-windows-setup.${ext}"
   },
   "nsis": {

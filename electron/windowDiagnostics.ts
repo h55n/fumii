@@ -14,8 +14,8 @@ function log(message: string) {
 
 /** Persist renderer failures because packaged apps usually have no visible DevTools. */
 export function attachWindowDiagnostics(name: string, webContents: WebContents) {
-  webContents.on('console-message', (_event, level, message, line, sourceId) =>
-    log(`[${name}-console] [L${level}] ${message} (${sourceId}:${line})`)
+  webContents.on('console-message', (details) =>
+    log(`[${name}-console] [${details.level}] ${details.message} (${details.sourceId}:${details.lineNumber})`)
   );
   webContents.on('did-fail-load', (_event, code, description, validatedURL) =>
     log(`[${name}-window] failed to load ${validatedURL}: ${code} (${description})`)

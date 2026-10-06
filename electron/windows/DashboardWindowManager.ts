@@ -1,12 +1,20 @@
 import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
+import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
 import { attachWindowDiagnostics } from '../windowDiagnostics';
+import { secureRendererWindow } from '../windowSecurity';
 
 export class DashboardWindowManager {
   window: BrowserWindow | null = null;
 
   private create() {
+    const rendererFilePath = join(__dirname, '../renderer/dashboard.html');
+    const devUrl = is.dev && process.env['ELECTRON_RENDERER_URL']
+      ? `${process.env['ELECTRON_RENDERER_URL'].replace(/\/+$/, '')}/dashboard.html`
+      : null;
+    const rendererUrl = devUrl ?? pathToFileURL(rendererFilePath).href;
+
     this.window = new BrowserWindow({
       title: 'fumii — Desktop Companion',
       width: 1100,
@@ -22,11 +30,12 @@ export class DashboardWindowManager {
       skipTaskbar: false,
       webPreferences: {
         preload: join(__dirname, '../preload/preload.js'),
-        sandbox: false,
+        sandbox: true,
         nodeIntegration: false,
         contextIsolation: true
       }
     });
+    secureRendererWindow(this.window, rendererUrl);
     attachWindowDiagnostics('dashboard', this.window.webContents);
 
     this.window.once('ready-to-show', () => {
@@ -44,10 +53,10 @@ export class DashboardWindowManager {
       }
     });
 
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      this.window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/dashboard.html`).catch(console.error);
+    if (devUrl) {
+      this.window.loadURL(rendererUrl).catch(console.error);
     } else {
-      this.window.loadFile(join(__dirname, '../renderer/dashboard.html')).catch(console.error);
+      this.window.loadFile(rendererFilePath).catch(console.error);
     }
 
     this.window.on('closed', () => {

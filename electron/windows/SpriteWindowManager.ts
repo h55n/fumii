@@ -1,7 +1,9 @@
 import { app, BrowserWindow, screen } from 'electron';
 import { join } from 'path';
+import { pathToFileURL } from 'node:url';
 import { is } from '@electron-toolkit/utils';
 import { attachWindowDiagnostics } from '../windowDiagnostics';
+import { secureRendererWindow } from '../windowSecurity';
 
 const SPRITE_SIZE = { width: 300, height: 260 };
 const EXPANDED_SIZE = { width: 300, height: 720 };
@@ -31,6 +33,11 @@ export class SpriteWindowManager {
     const { x, y, width, height } = display.workArea;
     const winX = x + width - SPRITE_SIZE.width - MARGIN;
     const winY = y + height - SPRITE_SIZE.height - MARGIN;
+    const rendererFilePath = join(__dirname, '../renderer/sprite.html');
+    const devUrl = is.dev && process.env['ELECTRON_RENDERER_URL']
+      ? `${process.env['ELECTRON_RENDERER_URL'].replace(/\/+$/, '')}/sprite.html`
+      : null;
+    const rendererUrl = devUrl ?? pathToFileURL(rendererFilePath).href;
 
     this.window = new BrowserWindow({
       title: 'fumii Companion',
@@ -49,20 +56,21 @@ export class SpriteWindowManager {
       icon: join(app.getAppPath(), 'assets/icon.png'),
       webPreferences: {
         preload: join(__dirname, '../preload/preload.js'),
-        sandbox: false,
+        sandbox: true,
         nodeIntegration: false,
         contextIsolation: true
       }
     });
+    secureRendererWindow(this.window, rendererUrl);
     attachWindowDiagnostics('sprite', this.window.webContents);
 
     this.window.setAlwaysOnTop(true, 'floating');
     this.window.setVisibleOnAllWorkspaces(true);
 
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      this.window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/sprite.html`).catch(console.error);
+    if (devUrl) {
+      this.window.loadURL(rendererUrl).catch(console.error);
     } else {
-      this.window.loadFile(join(__dirname, '../renderer/sprite.html')).catch(console.error);
+      this.window.loadFile(rendererFilePath).catch(console.error);
     }
 
     this.window.once('ready-to-show', () => {
@@ -119,4 +127,3 @@ export class SpriteWindowManager {
     this.window.webContents.send('chat:toggled', this.chatOpen);
   }
 }
-

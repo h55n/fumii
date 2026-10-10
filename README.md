@@ -38,6 +38,8 @@
 
 ### 👥 The Team
 
+Contribution plan for core software (50/50): Hassan Rehman focuses on the frontend and user-facing desktop app; Mrunmayee Daware focuses on the remaining software work, including AI/LLM integration, memory, testing, and documentation. Hardware and embedded engineering remain with Yash Gadhave and Tanishq Mhetras.
+
 | Name | Role | Focus |
 |------|------|-------|
 | **Mrunmayee Daware** | AI / LLM Integration | Prompt Engineering, Personality & Emotion Engine |
